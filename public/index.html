@@ -1,60 +1,29 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-    <style>
-        body { margin: 0; background: #000; color: #fff; }
-        #game-container { width: 100vw; height: 100vh; }
-        .ui { position: fixed; top: 10px; z-index: 999; }
-        .btn { padding: 15px; background: #00f0ff; color: #000; font-weight: bold; border-radius: 8px; }
-    </style>
-</head>
-<body>
-    <div id="ui">
-        <button class="btn" onclick="startHost()">СТАРТ (ХОСТ)</button>
-        <button class="btn" onclick="startClient()">ДЖОЙСТИК (P2)</button>
-    </div>
-    <div id="game-container"></div>
-
-    <script>
-        const config = { /* ВСТАВЬ СВОИ КЛЮЧИ ТУТ */ };
-        firebase.initializeApp(config);
-        const db = firebase.firestore();
-        const LOBBY = "ROOM1";
-
-        // ХОСТ: Слушает Firebase и ПРЯМО КОРМИТ ЭМУЛЯТОР
-        window.startHost = () => {
-            window.EJS_player = '#game-container';
-            window.EJS_core = 'sega';
-            window.EJS_gameUrl = '/sonic.bin';
-            window.EJS_pathtodata = '/data/';
-            const s = document.createElement('script');
-            s.src = '/data/loader.js';
-            document.body.appendChild(s);
-
-            // МОСТ: когда эмулятор готов, слушаем Firebase
+// Слушаем Firebase
+db.collection("lobbies").doc(LOBBY).onSnapshot(doc => {
+    const d = doc.data();
+    if(d && d.btn) {
+        console.log("Пытаюсь пробить эмулятор:", d.btn);
+        
+        // НАХОДИМ iframe эмулятора
+        const iframe = document.querySelector('iframe') || document.querySelector('iframe');
+        
+        // Если iframe есть, шлем событие ПРЯМО В НЕГО
+        if (iframe && iframe.contentWindow) {
+            const ev = new KeyboardEvent('keydown', { 
+                code: d.btn, 
+                bubbles: true, 
+                cancelable: true 
+            });
+            iframe.contentWindow.dispatchEvent(ev);
+            
+            // Отпускаем кнопку
             setTimeout(() => {
-                db.collection("lobbies").doc(LOBBY).onSnapshot(doc => {
-                    const d = doc.data();
-                    if(d && d.btn && window.EJS_emulator) {
-                        // ПРЯМОЙ ВПРЫСК В ЭМУЛЯТОР (Это обходит все защиты)
-                        // Код кнопки (внутренний индекс эмулятора)
-                        const key = { "A": 1, "B": 2, "UP": 3 }[d.btn];
-                        window.EJS_emulator.gamepadState[key] = 1;
-                        setTimeout(() => window.EJS_emulator.gamepadState[key] = 0, 100);
-                    }
-                });
-            }, 5000); // Ждем 5 сек пока прогрузится
-        };
-
-        // КЛИЕНТ: Шлет в Firebase
-        window.startClient = () => {
-            document.body.innerHTML = `
-                <button onpointerdown="db.collection('lobbies').doc('ROOM1').update({btn:'A'})" class="btn" style="background:red">A</button>
-                <button onpointerdown="db.collection('lobbies').doc('ROOM1').update({btn:'UP'})" class="btn">UP</button>
-            `;
-        };
-    </script>
-</body>
-</html>
+                const up = new KeyboardEvent('keyup', { code: d.btn, bubbles: true });
+                iframe.contentWindow.dispatchEvent(up);
+            }, 100);
+        } else {
+            // Если iframe нет, шлем в документ (на случай если эмулятор в shadow dom)
+            window.dispatchEvent(new KeyboardEvent('keydown', { code: d.btn, bubbles: true }));
+        }
+    }
+});
