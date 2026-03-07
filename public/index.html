@@ -3,72 +3,93 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Pixel Arena Final</title>
+    <title>Pixel Arena | Battletoads Mode</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background: #000; color: #fff; font-family: monospace; margin: 0; overflow: hidden; }
-        .btn { background: #00f0ff; color: #000; padding: 20px; border-radius: 8px; width: 80%; font-weight: bold; text-transform: uppercase; margin: 10px; cursor: pointer; }
-        #game-container { width: 100vw; height: 100vh; }
+        body { background: #000; color: #fff; margin: 0; font-family: monospace; }
+        .btn { background: #00f0ff; color: #000; padding: 15px; width: 80%; border-radius: 8px; font-weight: bold; margin: 10px; cursor: pointer; text-transform: uppercase; }
+        #game-overlay { position: fixed; inset: 0; background: #000; z-index: 1000; display: none; flex-direction: column; }
+        #game-container { width: 100vw; height: 90vh; }
+        .dpad { width: 60px; height: 60px; background: #333; border-radius: 8px; color: #fff; border: none; }
+        .action { width: 70px; height: 70px; border-radius: 50%; font-weight: bold; border: none; }
     </style>
 </head>
 <body>
 
+    <!-- МЕНЮ -->
     <div id="menu" style="display:flex; flex-direction:column; align-items:center; height:100vh; justify-content:center;">
-        <h1 style="color:#00f0ff; font-size: 24px;">PIXEL ARENA</h1>
-        <button class="btn" onclick="startHost()">ХОСТ (ПК)</button>
+        <h1 style="color:#00f0ff; font-size: 24px;">BATTLETOADS ARENA</h1>
+        <button class="btn" onclick="startHost()">СТАРТ (ХОСТ)</button>
         <button class="btn bg-pink-500" onclick="startClient()">ДЖОЙСТИК (P2)</button>
     </div>
 
-    <div id="game-container"></div>
+    <!-- ЭМУЛЯТОР -->
+    <div id="game-overlay">
+        <div class="h-10 bg-zinc-900 text-[10px] flex items-center px-4 italic text-cyan-400">HOST MODE: P2 CONNECTED</div>
+        <div id="game-container"></div>
+    </div>
+
+    <!-- КОНТРОЛЛЕР P2 -->
+    <div id="controller-ui" style="display:none; flex-direction:column; align-items:center; justify-content:center; height:100vh; gap:20px;">
+        <h2 style="color:red">ДЖОЙСТИК P2</h2>
+        <div style="display:grid; grid-template-columns: repeat(3, 60px); gap:10px;">
+            <div></div><button class="dpad" onpointerdown="send('UP')">▲</button><div></div>
+            <button class="dpad" onpointerdown="send('LEFT')">◀</button>
+            <div style="background:#000;"></div>
+            <button class="dpad" onpointerdown="send('RIGHT')">▶</button>
+            <div></div><button class="dpad" onpointerdown="send('DOWN')">▼</button><div></div>
+        </div>
+        <div style="display:flex; gap:20px;">
+            <button class="action" style="background:red" onpointerdown="send('A')">A</button>
+            <button class="action" style="background:yellow; color:black" onpointerdown="send('B')">B</button>
+            <button class="action" style="background:blue" onpointerdown="send('C')">C</button>
+        </div>
+        <button onclick="send('START')" class="btn" style="width:150px; background:#555">START</button>
+    </div>
 
     <script>
-        // ❌ ТВОИ КЛЮЧИ FIREBASE ❌
+        // ❌ ВСТАВЬ СВОИ КЛЮЧИ ТУТ ❌
         const firebaseConfig = { projectId: "studio-8235565247-f8a50", appId: "1:924081428998:web:8c62d7a8df8676cb7e8187", apiKey: "AIzaSyBJUydsDT4euRjy5A1EIEQWMtud91FPEFo", authDomain: "studio-8235565247-f8a50.firebaseapp.com", messagingSenderId: "924081428998" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
         const LOBBY = "ROOM1";
 
-        // 1. ХОСТ: ЗАПУСК
-        window.startHost = () => {
+        // 1. ХОСТ
+        function startHost() {
             document.getElementById('menu').style.display = 'none';
+            document.getElementById('game-overlay').style.display = 'flex';
             
             window.EJS_player = '#game-container';
             window.EJS_core = 'sega';
-            window.EJS_gameUrl = '/sonic.bin';
+            window.EJS_gameUrl = '/battletoads.md'; // Используем твой файл
             window.EJS_pathtodata = '/data/';
             const s = document.createElement('script');
             s.src = '/data/loader.js';
             document.body.appendChild(s);
 
-            // МОСТ: Слушаем Firebase и шлем в iframe
+            // Слушаем Firebase и шлем в Bridge
             db.collection("lobbies").doc(LOBBY).onSnapshot(doc => {
                 const d = doc.data();
                 if(d && d.btn) {
-                    console.log("Команда P2:", d.btn);
-                    // СТУЧИМСЯ ВНУТРЬ IFRAME ЭМУЛЯТОРА
-                    const iframe = document.querySelector('iframe');
-                    if(iframe) {
-                        iframe.contentWindow.postMessage({ type: 'key', code: d.btn }, '*');
+                    console.log("Мост: впрыск кнопки", d.btn);
+                    if(window.ArenaBridge) {
+                        window.ArenaBridge.press(d.btn);
                     }
                 }
             });
-        };
+        }
 
-        // 2. КЛИЕНТ: ДЖОЙСТИК
-        window.startClient = () => {
-            document.body.innerHTML = `
-                <div style="display:flex; flex-direction:column; gap:20px; padding:50px;">
-                    <button onclick="send('ArrowUp')" class="btn">UP</button>
-                    <button onclick="send('KeyX')" class="btn" style="background:red">A</button>
-                    <button onclick="send('KeyZ')" class="btn" style="background:yellow">B</button>
-                </div>`;
-        };
+        // 2. КЛИЕНТ
+        function startClient() {
+            document.getElementById('menu').style.display = 'none';
+            document.getElementById('controller-ui').style.display = 'flex';
+        }
 
-        window.send = (btn) => {
+        function send(btn) {
             db.collection("lobbies").doc(LOBBY).update({ btn: btn, ts: Date.now() });
-        };
+        }
     </script>
 </body>
 </html>
