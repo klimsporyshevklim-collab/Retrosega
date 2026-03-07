@@ -1,41 +1,56 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Arena Debugger</title>
+    <title>Pixel Arena - Multiplayer Engine</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <style>
-        body { margin: 0; background: #111; color: #fff; font-family: monospace; }
+        body { margin: 0; background: #000; color: #fff; font-family: monospace; overflow: hidden; }
         #game-container { width: 100vw; height: 100vh; }
-        #debug-panel { position: fixed; top: 10px; left: 10px; right: 10px; background: rgba(0,0,0,0.9); border: 2px solid red; padding: 15px; font-size: 12px; color: #ff0000; z-index: 9999; }
+        #controller-ui { position: fixed; bottom: 50px; left: 0; right: 0; display: flex; justify-content: center; gap: 20px; z-index: 2000; }
+        .btn { padding: 20px 40px; background: #00f0ff; color: black; font-weight: bold; border-radius: 50px; border: none; }
     </style>
 </head>
 <body>
-    <div id="debug-panel" style="display:none;"></div>
     <div id="game-container"></div>
+    
+    <!-- Джойстик P2 -->
+    <div id="controller-ui">
+        <button onpointerdown="send('KeyX')" class="btn" style="background:red; color:white">A</button>
+        <button onpointerdown="send('KeyZ')" class="btn" style="background:yellow">B</button>
+    </div>
 
     <script>
-        const debug = document.getElementById('debug-panel');
-        function log(msg) {
-            debug.style.display = 'block';
-            debug.innerText += "\n> " + msg;
-            console.log(msg);
-        }
+        // 1. ИНИЦИАЛИЗАЦИЯ FIREBASE
+        const config = { projectId: "studio-8235565247-f8a50", appId: "1:924081428998:web:8c62d7a8df8676cb7e8187", apiKey: "AIzaSyBJUydsDT4euRjy5A1EIEQWMtud91FPEFo", authDomain: "studio-8235565247-f8a50.firebaseapp.com", messagingSenderId: "924081428998" };
+        firebase.initializeApp(config);
+        const db = firebase.firestore();
+        const LOBBY = "ROOM1";
 
-        // Перехват ошибок
-        window.onerror = (m) => log("FATAL: " + m);
-
+        // 2. ЗАПУСК ЭМУЛЯТОРА (РАБОЧИЙ!)
         window.EJS_player = '#game-container';
         window.EJS_core = 'sega';
         window.EJS_gameUrl = '/sonic.bin';
         window.EJS_pathtodata = '/data/';
-        
-        // Мониторинг загрузки
-        log("Загрузка loader.js...");
         const s = document.createElement('script');
         s.src = '/data/loader.js';
-        s.onerror = () => log("Ошибка: /data/loader.js не найден!");
-        s.onload = () => log("loader.js загружен. Ждем WASM...");
         document.body.appendChild(s);
+
+        // 3. СЛУШАТЕЛЬ КНОПОК (Для Хоста)
+        db.collection("lobbies").doc(LOBBY).onSnapshot(doc => {
+            const d = doc.data();
+            if(d && d.btn) {
+                // Имитируем нажатие
+                window.dispatchEvent(new KeyboardEvent('keydown', { code: d.btn, bubbles: true }));
+                setTimeout(() => window.dispatchEvent(new KeyboardEvent('keyup', { code: d.btn, bubbles: true })), 100);
+            }
+        });
+
+        // 4. ОТПРАВКА (Для Телефона)
+        window.send = (btn) => {
+            db.collection("lobbies").doc(LOBBY).update({ btn: btn, ts: Date.now() });
+        };
     </script>
 </body>
 </html>
