@@ -1,56 +1,71 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>Pixel Arena - Multiplayer Engine</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <style>
-        body { margin: 0; background: #000; color: #fff; font-family: monospace; overflow: hidden; }
-        #game-container { width: 100vw; height: 100vh; }
-        #controller-ui { position: fixed; bottom: 50px; left: 0; right: 0; display: flex; justify-content: center; gap: 20px; z-index: 2000; }
-        .btn { padding: 20px 40px; background: #00f0ff; color: black; font-weight: bold; border-radius: 50px; border: none; }
+        body { background: #000; color: #fff; margin: 0; overflow: hidden; }
+        .hidden { display: none !important; }
+        #menu { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
+        .btn { background: #00f0ff; color: #000; padding: 20px; border-radius: 8px; width: 80%; font-weight: bold; margin: 10px; cursor: pointer; }
     </style>
 </head>
 <body>
-    <div id="game-container"></div>
-    
-    <!-- Джойстик P2 -->
-    <div id="controller-ui">
-        <button onpointerdown="send('KeyX')" class="btn" style="background:red; color:white">A</button>
-        <button onpointerdown="send('KeyZ')" class="btn" style="background:yellow">B</button>
+
+    <!-- МЕНЮ ВЫБОРА РОЛИ -->
+    <div id="menu">
+        <button class="btn" onclick="initHost()">Я ХОСТ (ПК/ЗАПУСТИТЬ ИГРУ)</button>
+        <button class="btn bg-pink-500" onclick="initClient()">Я ИГРОК 2 (ТЕЛЕФОН)</button>
+    </div>
+
+    <!-- КОНТЕЙНЕР ДЛЯ ИГРЫ (ТОЛЬКО ДЛЯ ХОСТА) -->
+    <div id="game-container" style="width:100vw; height:100vh;"></div>
+
+    <!-- КОНТРОЛЛЕР (ТОЛЬКО ДЛЯ P2) -->
+    <div id="controller-ui" style="display:none; height:100vh; align-items:center; justify-content:center; gap:20px;">
+        <button onclick="send('a')" style="width:100px; height:100px; background:red;">A</button>
+        <button onclick="send('b')" style="width:100px; height:100px; background:yellow;">B</button>
     </div>
 
     <script>
-        // 1. ИНИЦИАЛИЗАЦИЯ FIREBASE
         const config = { projectId: "studio-8235565247-f8a50", appId: "1:924081428998:web:8c62d7a8df8676cb7e8187", apiKey: "AIzaSyBJUydsDT4euRjy5A1EIEQWMtud91FPEFo", authDomain: "studio-8235565247-f8a50.firebaseapp.com", messagingSenderId: "924081428998" };
         firebase.initializeApp(config);
         const db = firebase.firestore();
         const LOBBY = "ROOM1";
 
-        // 2. ЗАПУСК ЭМУЛЯТОРА (РАБОЧИЙ!)
-        window.EJS_player = '#game-container';
-        window.EJS_core = 'sega';
-        window.EJS_gameUrl = '/sonic.bin';
-        window.EJS_pathtodata = '/data/';
-        const s = document.createElement('script');
-        s.src = '/data/loader.js';
-        document.body.appendChild(s);
+        // ХОСТ: ЗАПУСКАЕТ ЭМУЛЯТОР
+        function initHost() {
+            document.getElementById('menu').style.display = 'none';
+            
+            // Запускаем EmulatorJS
+            window.EJS_player = '#game-container';
+            window.EJS_core = 'sega';
+            window.EJS_gameUrl = '/sonic.bin';
+            window.EJS_pathtodata = '/data/';
+            const s = document.createElement('script');
+            s.src = '/data/loader.js';
+            document.body.appendChild(s);
 
-        // 3. СЛУШАТЕЛЬ КНОПОК (Для Хоста)
-        db.collection("lobbies").doc(LOBBY).onSnapshot(doc => {
-            const d = doc.data();
-            if(d && d.btn) {
-                // Имитируем нажатие
-                window.dispatchEvent(new KeyboardEvent('keydown', { code: d.btn, bubbles: true }));
-                setTimeout(() => window.dispatchEvent(new KeyboardEvent('keyup', { code: d.btn, bubbles: true })), 100);
-            }
-        });
+            // СЛУШАЕМ P2
+            db.collection("lobbies").doc(LOBBY).onSnapshot(doc => {
+                const d = doc.data();
+                if(d && d.lastBtn) {
+                    // Эмуляция нажатия для EmulatorJS
+                    const event = new KeyboardEvent('keydown', { key: d.lastBtn });
+                    document.dispatchEvent(event);
+                }
+            });
+        }
 
-        // 4. ОТПРАВКА (Для Телефона)
-        window.send = (btn) => {
-            db.collection("lobbies").doc(LOBBY).update({ btn: btn, ts: Date.now() });
-        };
+        // КЛИЕНТ: ТОЛЬКО ДЖОЙСТИК
+        function initClient() {
+            document.getElementById('menu').style.display = 'none';
+            document.getElementById('controller-ui').style.display = 'flex';
+        }
+
+        function send(btn) {
+            db.collection("lobbies").doc(LOBBY).update({ lastBtn: btn });
+        }
     </script>
 </body>
 </html>
