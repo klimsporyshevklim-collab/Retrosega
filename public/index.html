@@ -2,31 +2,50 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Pixel Arena Final</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pixel Arena | P2P Cloud</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <style>
-        body { background: #000; color: #fff; margin: 0; }
-        #game-container { width: 100vw; height: 100vh; display: block; }
-        #menu { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 2000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; }
-        .btn { background: #00f0ff; color: #000; padding: 20px; width: 80%; border-radius: 10px; font-weight: bold; text-transform: uppercase; }
+        body { background: #000; color: #fff; font-family: sans-serif; margin: 0; }
+        #menu { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; gap: 20px; }
+        .btn { background: #00f0ff; color: #000; padding: 20px; border-radius: 8px; width: 80%; font-weight: bold; border: none; }
+        #game-area { display: none; width: 100vw; height: 100vh; }
+        #controller-area { display: none; height: 100vh; flex-direction: column; justify-content: center; align-items: center; gap: 20px; }
     </style>
 </head>
 <body>
+
+    <!-- МЕНЮ -->
     <div id="menu">
-        <button class="btn" onclick="runHost()">СОЗДАТЬ ИГРУ</button>
-        <button class="btn" onclick="runClient()">ВОЙТИ В ИГРУ</button>
+        <button class="btn" onclick="initHost()">ХОСТ (ЗАПУСТИТЬ ИГРУ)</button>
+        <button class="btn bg-pink-500" onclick="initClient()">ИГРОК 2 (ДЖОЙСТИК)</button>
     </div>
-    <div id="game-container"></div>
+
+    <!-- ЭКРАН ХОСТА -->
+    <div id="game-area">
+        <div id="game-container" style="width: 100%; height: 100%;"></div>
+    </div>
+
+    <!-- ЭКРАН КЛИЕНТА (P2) -->
+    <div id="controller-area">
+        <div class="text-xs text-pink-500 font-bold uppercase">Твой телефон - это Джойстик</div>
+        <button onpointerdown="send('KeyX')" class="btn" style="background: red; color:white; width: 100px;">КНОПКА A</button>
+        <button onpointerdown="send('KeyZ')" class="btn" style="background: yellow; color:black; width: 100px;">КНОПКА B</button>
+    </div>
 
     <script>
-        const config = { projectId: "studio-8235565247-f8a50", appId: "1:924081428998:web:8c62d7a8df8676cb7e8187", apiKey: "AIzaSyBJUydsDT4euRjy5A1EIEQWMtud91FPEFo", authDomain: "studio-8235565247-f8a50.firebaseapp.com" };
-        firebase.initializeApp(config);
+        const firebaseConfig = { projectId: "studio-8235565247-f8a50", appId: "1:924081428998:web:8c62d7a8df8676cb7e8187", apiKey: "AIzaSyBJUydsDT4euRjy5A1EIEQWMtud91FPEFo", authDomain: "studio-8235565247-f8a50.firebaseapp.com", messagingSenderId: "924081428998" };
+        firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
-        let lobbyId = "ROOM1";
+        let lobbyId = "ROOM1"; // Для теста один ID
 
-        function startEngine() {
+        // 1. ХОСТ: Грузит эмулятор и СЛУШАЕТ Firebase
+        window.initHost = () => {
             document.getElementById('menu').style.display = 'none';
+            document.getElementById('game-area').style.display = 'block';
+
+            // Грузим эмулятор ТОЛЬКО на Хосте
             window.EJS_player = '#game-container';
             window.EJS_core = 'sega';
             window.EJS_gameUrl = '/sonic.bin';
@@ -34,32 +53,26 @@
             const s = document.createElement('script');
             s.src = '/data/loader.js';
             document.body.appendChild(s);
-        }
 
-        window.runHost = () => {
-            db.collection("lobbies").doc(lobbyId).set({ btn: null });
-            startEngine();
+            // Слушаем кнопки от P2
             db.collection("lobbies").doc(lobbyId).onSnapshot(doc => {
                 const d = doc.data();
                 if(d && d.btn) {
-                    const code = { A: "KeyX", B: "KeyZ", C: "KeyC", UP: "ArrowUp" }[d.btn];
-                    if(code) {
-                        window.dispatchEvent(new KeyboardEvent('keydown', { code }));
-                        setTimeout(() => window.dispatchEvent(new KeyboardEvent('keyup', { code })), 100);
-                    }
+                    // Имитируем нажатие
+                    window.dispatchEvent(new KeyboardEvent('keydown', { code: d.btn }));
+                    setTimeout(() => window.dispatchEvent(new KeyboardEvent('keyup', { code: d.btn })), 100);
                 }
             });
         };
 
-        window.runClient = () => {
-            document.getElementById('menu').innerHTML = `
-                <button onclick="send('UP')" class="btn" style="height:100px">UP</button>
-                <button onclick="send('A')" class="btn" style="height:100px; background:red">A</button>
-            `;
+        // 2. КЛИЕНТ: НЕ грузит эмулятор, только шлет кнопки
+        window.initClient = () => {
+            document.getElementById('menu').style.display = 'none';
+            document.getElementById('controller-area').style.display = 'flex';
         };
 
-        window.send = (b) => {
-            db.collection("lobbies").doc(lobbyId).update({ btn: b, ts: Date.now() });
+        window.send = (btn) => {
+            db.collection("lobbies").doc(lobbyId).update({ btn: btn, ts: Date.now() });
         };
     </script>
 </body>
