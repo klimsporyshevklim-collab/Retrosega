@@ -2,91 +2,100 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Pixel Arena - Battletoads Bridge</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pixel Arena</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <style>
-        body { background: #000; color: #fff; font-family: monospace; overflow: hidden; margin: 0; }
-        #game-overlay { position: fixed; inset: 0; background: #000; z-index: 1000; display: none; flex-direction: column; }
-        #game-container { width: 100%; height: 100%; flex: 1; }
-        .btn { background: #00f0ff; color: #000; font-weight: bold; padding: 15px; border-radius: 8px; width: 100%; text-transform: uppercase; margin: 5px 0; }
+        body { background: #000; color: #fff; font-family: monospace; }
+        .btn { background: #00f0ff; color: #000; padding: 20px; border-radius: 8px; font-weight: bold; width: 100%; border: none; margin-top: 10px; }
+        #lobbies-container { padding: 20px; }
+        .lobby-card { background: #222; padding: 15px; margin-bottom: 10px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
     </style>
 </head>
-<body class="p-6 bg-zinc-950 h-screen flex flex-col">
-    
-    <div id="main-ui" class="flex-1 flex flex-col justify-center items-center gap-4">
-        <h1 class="text-[#00f0ff] font-bold text-2xl italic">ARENA BATTLETOADS</h1>
-        <button onclick="window.app.host('battletoads.md', 'Battletoads')" class="btn">HOST BATTLETOADS</button>
-        <button onclick="window.app.joinPrompt()" class="btn bg-pink-600 text-white">JOIN P2</button>
-    </div>
-
-    <div id="game-overlay">
-        <div class="h-12 bg-zinc-900 flex justify-between items-center px-4 border-b border-[#00f0ff]/20">
-            <span id="status-tag" class="text-[9px] text-[#00f0ff] font-bold uppercase italic">LINKING TO ROM...</span>
-            <button onclick="location.reload()" class="text-white/40">EXIT</button>
+<body>
+    <div id="menu">
+        <button class="btn" onclick="hostGame()">СОЗДАТЬ ИГРУ</button>
+        <div id="lobbies-container">
+            <h2 class="text-xs uppercase text-gray-400 mb-4">Доступные игры:</h2>
+            <div id="lobbies-list">Загрузка...</div>
         </div>
-        <div id="game-container"></div>
     </div>
+    <div id="game-container" style="width: 100vw; height: 100vh; display: none;"></div>
 
     <script>
-        (function() {
-            var db, currentLobby = null, isHost = false;
-            var p2map = { UP: "ArrowUp", DOWN: "ArrowDown", LEFT: "ArrowLeft", RIGHT: "ArrowRight", A: "KeyX", B: "KeyZ", C: "KeyC", START: "Enter" };
-            
-            // ❌ ВСТАВЬ СВОИ КЛЮЧИ ❌
-            const firebaseConfig = { projectId: "studio-8235565247-f8a50", appId: "1:924081428998:web:8c62d7a8df8676cb7e8187", apiKey: "AIzaSyBJUydsDT4euRjy5A1EIEQWMtud91FPEFo", authDomain: "studio-8235565247-f8a50.firebaseapp.com", messagingSenderId: "924081428998" };
+        const firebaseConfig = { projectId: "studio-8235565247-f8a50", appId: "1:924081428998:web:8c62d7a8df8676cb7e8187", apiKey: "AIzaSyBJUydsDT4euRjy5A1EIEQWMtud91FPEFo", authDomain: "studio-8235565247-f8a50.firebaseapp.com", messagingSenderId: "924081428998" };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        let currentLobbyId = null;
 
-            document.addEventListener('DOMContentLoaded', () => {
-                try { firebase.initializeApp(firebaseConfig); db = firebase.firestore(); } catch(e) {}
+        // 1. ХОСТ: Создает лобби
+        function hostGame() {
+            currentLobbyId = Math.random().toString(36).substring(2, 6).toUpperCase();
+            db.collection("lobbies").doc(currentLobbyId).set({ 
+                status: "open", 
+                host: "Игрок 1",
+                btn: null,
+                ts: Date.now() 
             });
+            alert("Комната создана! ID: " + currentLobbyId);
+            startEmulator();
+            listenForP2();
+        }
 
-            window.app = {
-                host: function(rom, title) {
-                    isHost = true;
-                    currentLobby = Math.random().toString(36).substring(2, 6).toUpperCase();
-                    document.getElementById('main-ui').style.display = 'none';
-                    document.getElementById('game-overlay').style.display = 'flex';
-                    
-                    db.collection("lobbies").doc(currentLobby).set({ title: title, status: "open", controller2: null });
-                    
-                    // Запуск эмулятора
-                    window.EJS_player = '#game-container';
-                    window.EJS_core = 'sega';
-                    window.EJS_gameUrl = '/' + rom;
-                    window.EJS_pathtodata = '/data/';
-                    var s = document.createElement('script'); s.src = '/data/loader.js'; document.body.appendChild(s);
+        // 2. СПИСОК ЛОББИ: Обновляется автоматически
+        db.collection("lobbies").where("status", "==", "open").onSnapshot(snapshot => {
+            const list = document.getElementById('lobbies-list');
+            list.innerHTML = "";
+            snapshot.forEach(doc => {
+                list.innerHTML += `<div class="lobby-card">
+                    <span>Комната ${doc.id}</span>
+                    <button class="btn" style="width: auto; padding: 5px 15px;" onclick="joinGame('${doc.id}')">ВОЙТИ</button>
+                </div>`;
+            });
+        });
 
-                    // Синхронизация и Мост к памяти
-                    db.collection("lobbies").doc(currentLobby).onSnapshot(doc => {
-                        const d = doc.data();
-                        if(d && d.controller2) {
-                            const code = p2map[d.controller2.btn];
-                            if(code) {
-                                window.dispatchEvent(new KeyboardEvent('keydown', { code }));
-                                setTimeout(() => window.dispatchEvent(new KeyboardEvent('keyup', { code })), 100);
-                            }
-                        }
-                    });
+        // 3. КЛИЕНТ: Вход
+        function joinGame(id) {
+            currentLobbyId = id;
+            document.getElementById('menu').innerHTML = `
+                <h2 class="text-center">ВЫ В ЛОББИ ${id}</h2>
+                <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+                    <button onclick="sendBtn('ArrowUp')" class="btn">UP</button>
+                    <button onclick="sendBtn('ArrowLeft')" class="btn">LEFT</button>
+                    <button onclick="sendBtn('ArrowRight')" class="btn">RIGHT</button>
+                    <button onclick="sendBtn('ArrowDown')" class="btn">DOWN</button>
+                    <button onclick="sendBtn('KeyX')" class="btn" style="background:red">A</button>
+                    <button onclick="sendBtn('KeyZ')" class="btn" style="background:yellow">B</button>
+                </div>
+            `;
+        }
 
-                    // АВТО-МОСТ: Проверка памяти игры каждые 500мс
-                    setInterval(() => {
-                        if (window.ArenaEngine && window.ArenaEngine.memory) {
-                            // Если игра просит выбрать количество игроков (адрес 0x09C3)
-                            // Если значение 1, а у нас есть P2 — переключаем на 2
-                            const pCount = window.ArenaEngine.readRamByte(0x09C3);
-                            if (pCount === 1) { 
-                                console.log("Игра в меню: Переключаю на 2 игрока...");
-                                window.dispatchEvent(new KeyboardEvent('keydown', { code: 'ArrowDown' }));
-                                setTimeout(() => window.dispatchEvent(new KeyboardEvent('keyup', { code: 'ArrowDown' })), 50);
-                            }
-                        }
-                    }, 500);
+        function sendBtn(code) {
+            db.collection("lobbies").doc(currentLobbyId).update({ btn: code, ts: Date.now() });
+        }
+
+        function startEmulator() {
+            document.getElementById('menu').style.display = 'none';
+            document.getElementById('game-container').style.display = 'block';
+            window.EJS_player = '#game-container';
+            window.EJS_core = 'sega';
+            window.EJS_gameUrl = '/sonic.bin';
+            window.EJS_pathtodata = '/data/';
+            const s = document.createElement('script');
+            s.src = '/data/loader.js';
+            document.body.appendChild(s);
+        }
+
+        function listenForP2() {
+            db.collection("lobbies").doc(currentLobbyId).onSnapshot(doc => {
+                const d = doc.data();
+                if(d && d.btn) {
+                    window.dispatchEvent(new KeyboardEvent('keydown', { code: d.btn }));
+                    setTimeout(() => window.dispatchEvent(new KeyboardEvent('keyup', { code: d.btn })), 100);
                 }
-            };
-        })();
+            });
+        }
     </script>
 </body>
 </html>
