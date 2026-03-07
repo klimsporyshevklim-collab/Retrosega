@@ -30,7 +30,6 @@
     }
 
     async function filesmissing(file) {
-        console.error("Failed to load " + file);
         if (file.includes(".min.") && !file.includes("socket")) {
             if (file === "emulator.min.js") {
                 for (let i = 0; i < scripts.length; i++) await loadScript(scripts[i]);
@@ -48,30 +47,28 @@
         await loadStyle("emulator.min.css");
     }
 
-    const config = {};
-    config.gameUrl = window.EJS_gameUrl;
-    config.dataPath = scriptPath;
-    config.system = window.EJS_core;
-    // ... (остальные поля конфига остаются прежними)
-    config.filePaths = window.EJS_paths;
+    const config = {
+        gameUrl: window.EJS_gameUrl,
+        dataPath: scriptPath,
+        system: window.EJS_core,
+        filePaths: window.EJS_paths
+    };
 
     window.EJS_emulator = new EmulatorJS(EJS_player, config);
     
-    // ==========================================
-    // ВСТРОЕННЫЙ БЭКДОР ДЛЯ МУЛЬТИПЛЕЕРА
-    // ==========================================
+    // --- МОСТ ДЛЯ МУЛЬТИПЛЕЕРА (ИНЪЕКЦИЯ) ---
     window.ArenaBridge = {
         press: function(btnName) {
             if (window.EJS_emulator && window.EJS_emulator.gamepadState) {
-                // Маппинг кнопок Sega (индексы геймпада)
+                // Sega/Genesis Map: A=0, B=1, C=2, START=9, DPAD=12-15
                 const map = { "UP": 12, "DOWN": 13, "LEFT": 14, "RIGHT": 15, "A": 0, "B": 1, "C": 2, "START": 9 };
-                const btnIndex = map[btnName];
-                if (btnIndex !== undefined) {
-                    window.EJS_emulator.gamepadState[btnIndex] = 1;
-                    setTimeout(() => { window.EJS_emulator.gamepadState[btnIndex] = 0; }, 100);
+                const idx = map[btnName];
+                if (idx !== undefined) {
+                    window.EJS_emulator.gamepadState[idx] = 1;
+                    setTimeout(() => { window.EJS_emulator.gamepadState[idx] = 0; }, 150);
                 }
             }
         }
     };
-    console.log("ArenaBridge initialized!");
+    console.log("ArenaBridge Injected successfully.");
 })();
