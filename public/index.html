@@ -3,88 +3,90 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Direct P2P Arena</title>
+    <title>Pixel Arena - Battletoads Bridge</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <style>
-        body { background: #000; color: white; font-family: monospace; overflow: hidden; margin: 0; }
-        .btn { padding: 20px; background: #00f0ff; color: #000; font-weight: bold; border-radius: 10px; width: 100%; text-transform: uppercase; }
-        .dpad { width: 60px; height: 60px; background: #222; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
-        .act { width: 70px; height: 70px; border-radius: 50%; font-weight: bold; }
+        body { background: #000; color: #fff; font-family: monospace; overflow: hidden; margin: 0; }
+        #game-overlay { position: fixed; inset: 0; background: #000; z-index: 1000; display: none; flex-direction: column; }
+        #game-container { width: 100%; height: 100%; flex: 1; }
+        .btn { background: #00f0ff; color: #000; font-weight: bold; padding: 15px; border-radius: 8px; width: 100%; text-transform: uppercase; margin: 5px 0; }
     </style>
 </head>
-<body class="flex flex-col h-screen p-6 justify-center">
-
-    <div id="menu" class="space-y-4">
-        <h1 class="text-2xl text-center text-[#00f0ff] font-bold">DIRECT P2P</h1>
-        <button id="btn-host" class="btn">ХОСТ (ПК)</button>
-        <button id="btn-join" class="btn bg-pink-500">ПРИСОЕДИНИТЬСЯ (ТЕЛЕФОН)</button>
+<body class="p-6 bg-zinc-950 h-screen flex flex-col">
+    
+    <div id="main-ui" class="flex-1 flex flex-col justify-center items-center gap-4">
+        <h1 class="text-[#00f0ff] font-bold text-2xl italic">ARENA BATTLETOADS</h1>
+        <button onclick="window.app.host('battletoads.md', 'Battletoads')" class="btn">HOST BATTLETOADS</button>
+        <button onclick="window.app.joinPrompt()" class="btn bg-pink-600 text-white">JOIN P2</button>
     </div>
 
-    <!-- P2 CONTROLLER -->
-    <div id="controller" class="hidden h-screen flex-col items-center justify-center gap-6">
-        <div class="grid grid-cols-3 gap-2">
-            <div></div><button id="up" class="dpad">▲</button><div></div>
-            <button id="left" class="dpad">◀</button>
-            <div class="w-[60px] h-[60px] bg-zinc-900 rounded-full"></div>
-            <button id="right" class="dpad">▶</button>
-            <div></div><button id="down" class="dpad">▼</button><div></div>
+    <div id="game-overlay">
+        <div class="h-12 bg-zinc-900 flex justify-between items-center px-4 border-b border-[#00f0ff]/20">
+            <span id="status-tag" class="text-[9px] text-[#00f0ff] font-bold uppercase italic">LINKING TO ROM...</span>
+            <button onclick="location.reload()" class="text-white/40">EXIT</button>
         </div>
-        <div class="flex gap-4">
-            <button id="a" class="act bg-red-600">A</button>
-            <button id="b" class="act bg-yellow-500">B</button>
-        </div>
+        <div id="game-container"></div>
     </div>
 
     <script>
-        let peerConnection;
-        let dataChannel;
-        const config = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
-
-        // 1. HOST: Создает соединение
-        document.getElementById('btn-host').onclick = async () => {
-            peerConnection = new RTCPeerConnection(config);
-            dataChannel = peerConnection.createDataChannel("gamepad");
+        (function() {
+            var db, currentLobby = null, isHost = false;
+            var p2map = { UP: "ArrowUp", DOWN: "ArrowDown", LEFT: "ArrowLeft", RIGHT: "ArrowRight", A: "KeyX", B: "KeyZ", C: "KeyC", START: "Enter" };
             
-            dataChannel.onmessage = e => {
-                const btn = e.data; // Получаем кнопку
-                window.dispatchEvent(new KeyboardEvent('keydown', { code: btn }));
-                setTimeout(() => window.dispatchEvent(new KeyboardEvent('keyup', { code: btn })), 100);
+            // ❌ ВСТАВЬ СВОИ КЛЮЧИ ❌
+            const firebaseConfig = { projectId: "studio-8235565247-f8a50", appId: "1:924081428998:web:8c62d7a8df8676cb7e8187", apiKey: "AIzaSyBJUydsDT4euRjy5A1EIEQWMtud91FPEFo", authDomain: "studio-8235565247-f8a50.firebaseapp.com", messagingSenderId: "924081428998" };
+
+            document.addEventListener('DOMContentLoaded', () => {
+                try { firebase.initializeApp(firebaseConfig); db = firebase.firestore(); } catch(e) {}
+            });
+
+            window.app = {
+                host: function(rom, title) {
+                    isHost = true;
+                    currentLobby = Math.random().toString(36).substring(2, 6).toUpperCase();
+                    document.getElementById('main-ui').style.display = 'none';
+                    document.getElementById('game-overlay').style.display = 'flex';
+                    
+                    db.collection("lobbies").doc(currentLobby).set({ title: title, status: "open", controller2: null });
+                    
+                    // Запуск эмулятора
+                    window.EJS_player = '#game-container';
+                    window.EJS_core = 'sega';
+                    window.EJS_gameUrl = '/' + rom;
+                    window.EJS_pathtodata = '/data/';
+                    var s = document.createElement('script'); s.src = '/data/loader.js'; document.body.appendChild(s);
+
+                    // Синхронизация и Мост к памяти
+                    db.collection("lobbies").doc(currentLobby).onSnapshot(doc => {
+                        const d = doc.data();
+                        if(d && d.controller2) {
+                            const code = p2map[d.controller2.btn];
+                            if(code) {
+                                window.dispatchEvent(new KeyboardEvent('keydown', { code }));
+                                setTimeout(() => window.dispatchEvent(new KeyboardEvent('keyup', { code })), 100);
+                            }
+                        }
+                    });
+
+                    // АВТО-МОСТ: Проверка памяти игры каждые 500мс
+                    setInterval(() => {
+                        if (window.ArenaEngine && window.ArenaEngine.memory) {
+                            // Если игра просит выбрать количество игроков (адрес 0x09C3)
+                            // Если значение 1, а у нас есть P2 — переключаем на 2
+                            const pCount = window.ArenaEngine.readRamByte(0x09C3);
+                            if (pCount === 1) { 
+                                console.log("Игра в меню: Переключаю на 2 игрока...");
+                                window.dispatchEvent(new KeyboardEvent('keydown', { code: 'ArrowDown' }));
+                                setTimeout(() => window.dispatchEvent(new KeyboardEvent('keyup', { code: 'ArrowDown' })), 50);
+                            }
+                        }
+                    }, 500);
+                }
             };
-
-            const offer = await peerConnection.createOffer();
-            await peerConnection.setLocalDescription(offer);
-            
-            // ВАЖНО: Мы покажем Offer, который нужно скопировать и вставить на телефон
-            const offerStr = JSON.stringify(offer);
-            prompt("Скопируй этот код на телефон:", offerStr);
-            
-            peerConnection.onicecandidate = e => { if(!e.candidate) log("Offer готов!"); };
-        };
-
-        // 2. CLIENT: Подключается
-        document.getElementById('btn-join').onclick = async () => {
-            peerConnection = new RTCPeerConnection(config);
-            const offerStr = prompt("Вставь код от Хоста:");
-            await peerConnection.setRemoteDescription(JSON.parse(offerStr));
-            
-            peerConnection.ondatachannel = e => {
-                dataChannel = e.channel;
-                document.getElementById('menu').style.display = 'none';
-                document.getElementById('controller').style.display = 'flex';
-            };
-
-            const answer = await peerConnection.createAnswer();
-            await peerConnection.setLocalDescription(answer);
-            prompt("Скопируй этот ответ обратно на ПК:", JSON.stringify(answer));
-        };
-
-        // Биндинг кнопок (отправка напрямую через DataChannel)
-        ['up', 'down', 'left', 'right', 'a', 'b', 'c'].forEach(id => {
-            document.getElementById(id).onpointerdown = () => {
-                if(dataChannel) dataChannel.send(id.toUpperCase());
-            };
-        });
+        })();
     </script>
 </body>
 </html>
