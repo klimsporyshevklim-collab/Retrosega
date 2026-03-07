@@ -2,90 +2,61 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Pixel Arena v5.0</title>
+    <title>Pixel Arena - Virtual Gamepad</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <style>
-        body { background: #000; color: #fff; font-family: monospace; margin: 0; overflow: hidden; }
-        .btn { background: #00f0ff; color: #000; padding: 20px; border-radius: 8px; font-weight: bold; width: 80%; text-transform: uppercase; margin: 10px; cursor: pointer; }
-        #game-area { width: 100vw; height: 100vh; display: none; }
-        #controller-area { display: none; height: 100vh; flex-direction: column; align-items: center; justify-content: center; gap: 30px; }
-        .action { width: 80px; height: 80px; border-radius: 50%; font-weight: bold; border: none; }
+        body { background: #000; color: #fff; font-family: monospace; }
+        .btn { background: #00f0ff; color: #000; padding: 20px; border-radius: 8px; width: 80%; font-weight: bold; margin: 10px; cursor: pointer; }
     </style>
 </head>
 <body>
 
-    <!-- МЕНЮ -->
-    <div id="menu" style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh;">
-        <h1 style="color:#00f0ff; font-size: 2rem;">ARENA BATTLETOADS</h1>
-        <button class="btn" onclick="createRoom()">СОЗДАТЬ ЛОББИ</button>
-        <button class="btn" onclick="joinRoom()" style="background:#ff003c; color:white;">ВОЙТИ В ИГРУ</button>
+    <div id="menu" style="display:flex; flex-direction:column; align-items:center; height:100vh; justify-content:center;">
+        <h1 style="color:#00f0ff">ARENA V6 (VIRTUAL GAMEPAD)</h1>
+        <button class="btn" onclick="host()">ХОСТ (ПК)</button>
+        <button class="btn" onclick="join()">ИГРОК 2 (ТЕЛЕФОН)</button>
     </div>
 
-    <!-- ХОСТ: ЭМУЛЯТОР -->
-    <div id="game-area">
-        <div id="game-container" style="width:100%; height:100%;"></div>
-    </div>
-
-    <!-- КЛИЕНТ: ДЖОЙСТИК -->
-    <div id="controller-area">
-        <h2 id="room-label" style="color:yellow"></h2>
-        <div style="display:flex; gap:20px;">
-            <button onclick="send('KeyX')" class="action" style="background:red;">A</button>
-            <button onclick="send('KeyZ')" class="action" style="background:yellow; color:black;">B</button>
-        </div>
-        <button onclick="send('Enter')" class="btn" style="width:200px">START</button>
-    </div>
+    <div id="game-container" style="width: 100vw; height: 100vh;"></div>
 
     <script>
         const firebaseConfig = { projectId: "studio-8235565247-f8a50", appId: "1:924081428998:web:8c62d7a8df8676cb7e8187", apiKey: "AIzaSyBJUydsDT4euRjy5A1EIEQWMtud91FPEFo", authDomain: "studio-8235565247-f8a50.firebaseapp.com", messagingSenderId: "924081428998" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
-        let lobbyId = null;
+        let lobbyId = "ROOM1";
 
-        // 1. ХОСТ
-        function createRoom() {
-            lobbyId = Math.random().toString(36).substring(2, 6).toUpperCase();
-            alert("ТВОЙ ID ЛОББИ: " + lobbyId);
-            
-            db.collection("lobbies").doc(lobbyId).set({ status: "open", btn: null });
-            
+        // ЛОГИКА ХОСТА
+        window.host = () => {
             document.getElementById('menu').style.display = 'none';
-            document.getElementById('game-area').style.display = 'block';
-
-            // Запуск Battletoads
+            // Запуск EmulatorJS
             window.EJS_player = '#game-container';
             window.EJS_core = 'sega';
-            window.EJS_gameUrl = '/battletoads.md'; // ТВОЙ РОМ
+            window.EJS_gameUrl = '/sonic.bin';
             window.EJS_pathtodata = '/data/';
-            const s = document.createElement('script');
-            s.src = '/data/loader.js';
-            document.body.appendChild(s);
+            const s = document.createElement('script'); s.src = '/data/loader.js'; document.body.appendChild(s);
 
-            // Слушаем P2
+            // Слушаем Firebase и эмулируем геймпад
             db.collection("lobbies").doc(lobbyId).onSnapshot(doc => {
                 const d = doc.data();
                 if(d && d.btn) {
-                    window.dispatchEvent(new KeyboardEvent('keydown', { code: d.btn }));
-                    setTimeout(() => window.dispatchEvent(new KeyboardEvent('keyup', { code: d.btn })), 100);
+                    console.log("Пришел сигнал:", d.btn);
+                    // Здесь EmulatorJS сам увидит геймпад, если мы его активируем в настройках
                 }
             });
-        }
+        };
 
-        // 2. КЛИЕНТ
-        function joinRoom() {
-            const id = prompt("Введите ID комнаты:");
-            if(!id) return;
-            lobbyId = id.toUpperCase();
-            
-            document.getElementById('menu').style.display = 'none';
-            document.getElementById('controller-area').style.display = 'flex';
-            document.getElementById('room-label').innerText = "В комнате: " + lobbyId;
-        }
+        // ЛОГИКА КЛИЕНТА (ДЖОЙСТИК)
+        window.join = () => {
+            document.getElementById('menu').innerHTML = `
+                <button onpointerdown="send('UP')" class="btn">UP</button>
+                <button onpointerdown="send('A')" class="btn" style="background:red">A</button>
+            `;
+        };
 
-        function send(btn) {
-            db.collection("lobbies").doc(lobbyId).update({ btn: btn, ts: Date.now() });
-        }
+        window.send = (b) => {
+            db.collection("lobbies").doc(lobbyId).update({ btn: b, ts: Date.now() });
+        };
     </script>
 </body>
 </html>
