@@ -1,71 +1,15 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-    <style>
-        body { background: #000; color: #fff; margin: 0; overflow: hidden; }
-        .hidden { display: none !important; }
-        #menu { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
-        .btn { background: #00f0ff; color: #000; padding: 20px; border-radius: 8px; width: 80%; font-weight: bold; margin: 10px; cursor: pointer; }
-    </style>
-</head>
-<body>
-
-    <!-- МЕНЮ ВЫБОРА РОЛИ -->
-    <div id="menu">
-        <button class="btn" onclick="initHost()">Я ХОСТ (ПК/ЗАПУСТИТЬ ИГРУ)</button>
-        <button class="btn bg-pink-500" onclick="initClient()">Я ИГРОК 2 (ТЕЛЕФОН)</button>
-    </div>
-
-    <!-- КОНТЕЙНЕР ДЛЯ ИГРЫ (ТОЛЬКО ДЛЯ ХОСТА) -->
-    <div id="game-container" style="width:100vw; height:100vh;"></div>
-
-    <!-- КОНТРОЛЛЕР (ТОЛЬКО ДЛЯ P2) -->
-    <div id="controller-ui" style="display:none; height:100vh; align-items:center; justify-content:center; gap:20px;">
-        <button onclick="send('a')" style="width:100px; height:100px; background:red;">A</button>
-        <button onclick="send('b')" style="width:100px; height:100px; background:yellow;">B</button>
-    </div>
-
-    <script>
-        const config = { projectId: "studio-8235565247-f8a50", appId: "1:924081428998:web:8c62d7a8df8676cb7e8187", apiKey: "AIzaSyBJUydsDT4euRjy5A1EIEQWMtud91FPEFo", authDomain: "studio-8235565247-f8a50.firebaseapp.com", messagingSenderId: "924081428998" };
-        firebase.initializeApp(config);
-        const db = firebase.firestore();
-        const LOBBY = "ROOM1";
-
-        // ХОСТ: ЗАПУСКАЕТ ЭМУЛЯТОР
-        function initHost() {
-            document.getElementById('menu').style.display = 'none';
-            
-            // Запускаем EmulatorJS
-            window.EJS_player = '#game-container';
-            window.EJS_core = 'sega';
-            window.EJS_gameUrl = '/sonic.bin';
-            window.EJS_pathtodata = '/data/';
-            const s = document.createElement('script');
-            s.src = '/data/loader.js';
-            document.body.appendChild(s);
-
-            // СЛУШАЕМ P2
-            db.collection("lobbies").doc(LOBBY).onSnapshot(doc => {
-                const d = doc.data();
-                if(d && d.lastBtn) {
-                    // Эмуляция нажатия для EmulatorJS
-                    const event = new KeyboardEvent('keydown', { key: d.lastBtn });
-                    document.dispatchEvent(event);
-                }
-            });
+// Слушаем Firebase
+db.collection("lobbies").doc(currentLobby).onSnapshot(doc => {
+    const d = doc.data();
+    if (d && d.btn) {
+        // Мы используем встроенный в EmulatorJS объект для "впрыска" нажатий
+        // Это "родной" способ управления для движка
+        if (window.EJS_emulator && window.EJS_emulator.gamepadState) {
+            // Маппинг кнопок для 2-го игрока
+            const btnMap = { "UP": 0, "DOWN": 1, "LEFT": 2, "RIGHT": 3, "A": 4, "B": 5 };
+            window.EJS_emulator.gamepadState[btnMap[d.btn]] = true;
+            setTimeout(() => { window.EJS_emulator.gamepadState[btnMap[d.btn]] = false; }, 100);
+            console.log("Прямой инъекционный ввод в эмулятор:", d.btn);
         }
-
-        // КЛИЕНТ: ТОЛЬКО ДЖОЙСТИК
-        function initClient() {
-            document.getElementById('menu').style.display = 'none';
-            document.getElementById('controller-ui').style.display = 'flex';
-        }
-
-        function send(btn) {
-            db.collection("lobbies").doc(LOBBY).update({ lastBtn: btn });
-        }
-    </script>
-</body>
-</html>
+    }
+});
