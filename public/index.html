@@ -2,60 +2,78 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Pixel Arena - Virtual Gamepad</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pixel Arena Final</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <style>
-        body { background: #000; color: #fff; font-family: monospace; }
-        .btn { background: #00f0ff; color: #000; padding: 20px; border-radius: 8px; width: 80%; font-weight: bold; margin: 10px; cursor: pointer; }
+        body { background: #000; color: #fff; font-family: monospace; margin: 0; overflow: hidden; }
+        .btn { background: #00f0ff; color: #000; padding: 20px; border-radius: 8px; width: 80%; font-weight: bold; text-transform: uppercase; border: none; cursor: pointer; margin: 10px; }
+        #game-container { width: 100vw; height: 100vh; background: #000; display: none; }
+        #controller-ui { display: none; flex-direction: column; align-items: center; justify-content: center; height: 100vh; gap: 20px; }
     </style>
 </head>
 <body>
 
     <div id="menu" style="display:flex; flex-direction:column; align-items:center; height:100vh; justify-content:center;">
-        <h1 style="color:#00f0ff">ARENA V6 (VIRTUAL GAMEPAD)</h1>
-        <button class="btn" onclick="host()">ХОСТ (ПК)</button>
-        <button class="btn" onclick="join()">ИГРОК 2 (ТЕЛЕФОН)</button>
+        <h1 style="color:#00f0ff; font-size: 24px; margin-bottom: 20px;">PIXEL ARENA</h1>
+        <button class="btn" onclick="startHost()">СОЗДАТЬ ИГРУ (HOST)</button>
+        <button class="btn bg-pink-500" onclick="startClient()">ВОЙТИ В ИГРУ (P2)</button>
     </div>
 
-    <div id="game-container" style="width: 100vw; height: 100vh;"></div>
+    <div id="game-container"></div>
+
+    <div id="controller-ui">
+        <h2 style="color:yellow">ДЖОЙСТИК P2</h2>
+        <button onclick="send('ArrowUp')" class="btn" style="width:100px;">UP</button>
+        <button onclick="send('KeyX')" class="btn" style="width:100px; background:red;">A</button>
+        <button onclick="send('KeyZ')" class="btn" style="width:100px; background:yellow;">B</button>
+    </div>
 
     <script>
-        const firebaseConfig = { projectId: "studio-8235565247-f8a50", appId: "1:924081428998:web:8c62d7a8df8676cb7e8187", apiKey: "AIzaSyBJUydsDT4euRjy5A1EIEQWMtud91FPEFo", authDomain: "studio-8235565247-f8a50.firebaseapp.com", messagingSenderId: "924081428998" };
+        // ТВОИ РЕАЛЬНЫЕ КЛЮЧИ ИНТЕГРИРОВАНЫ
+        const firebaseConfig = {
+            projectId: "studio-8235565247-f8a50",
+            appId: "1:924081428998:web:8c62d7a8df8676cb7e8187",
+            apiKey: "AIzaSyBJUydsDT4euRjy5A1EIEQWMtud91FPEFo",
+            authDomain: "studio-8235565247-f8a50.firebaseapp.com",
+            messagingSenderId: "924081428998"
+        };
+        
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
         let lobbyId = "ROOM1";
 
-        // ЛОГИКА ХОСТА
-        window.host = () => {
+        window.startHost = () => {
             document.getElementById('menu').style.display = 'none';
-            // Запуск EmulatorJS
+            document.getElementById('game-container').style.display = 'block';
+            
+            // Запуск эмулятора
             window.EJS_player = '#game-container';
             window.EJS_core = 'sega';
             window.EJS_gameUrl = '/sonic.bin';
             window.EJS_pathtodata = '/data/';
-            const s = document.createElement('script'); s.src = '/data/loader.js'; document.body.appendChild(s);
+            const s = document.createElement('script');
+            s.src = '/data/loader.js';
+            document.body.appendChild(s);
 
-            // Слушаем Firebase и эмулируем геймпад
+            // Слушаем Firebase
             db.collection("lobbies").doc(lobbyId).onSnapshot(doc => {
                 const d = doc.data();
                 if(d && d.btn) {
-                    console.log("Пришел сигнал:", d.btn);
-                    // Здесь EmulatorJS сам увидит геймпад, если мы его активируем в настройках
+                    window.dispatchEvent(new KeyboardEvent('keydown', { code: d.btn }));
+                    setTimeout(() => window.dispatchEvent(new KeyboardEvent('keyup', { code: d.btn })), 100);
                 }
             });
         };
 
-        // ЛОГИКА КЛИЕНТА (ДЖОЙСТИК)
-        window.join = () => {
-            document.getElementById('menu').innerHTML = `
-                <button onpointerdown="send('UP')" class="btn">UP</button>
-                <button onpointerdown="send('A')" class="btn" style="background:red">A</button>
-            `;
+        window.startClient = () => {
+            document.getElementById('menu').style.display = 'none';
+            document.getElementById('controller-ui').style.display = 'flex';
         };
 
-        window.send = (b) => {
-            db.collection("lobbies").doc(lobbyId).update({ btn: b, ts: Date.now() });
+        window.send = (btn) => {
+            db.collection("lobbies").doc(lobbyId).update({ btn: btn, ts: Date.now() });
         };
     </script>
 </body>
