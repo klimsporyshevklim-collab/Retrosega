@@ -1,87 +1,61 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Pixel Arena v7.0</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <title>Pixel Arena</title>
+    <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background: #000; color: #fff; font-family: monospace; margin: 0; overflow: hidden; }
-        .btn { background: #00f0ff; color: #000; padding: 20px; border-radius: 8px; width: 80%; font-weight: bold; text-transform: uppercase; border: none; cursor: pointer; margin: 10px; }
-        #game-overlay { position: fixed; inset: 0; background: #000; z-index: 1000; display: none; flex-direction: column; }
-        #game-container { width: 100vw; height: 100vh; display: block; }
-        #controller-ui { position: fixed; bottom: 0; left: 0; right: 0; display: none; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 20px; background: #111; z-index: 2000; }
+        body { margin: 0; background: #000; color: #fff; font-family: sans-serif; overflow: hidden; }
+        #game-container { width: 100vw; height: 100vh; }
+        .ui { position: fixed; top: 20px; left: 20px; z-index: 999; }
+        button { background: #00f0ff; padding: 15px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
 
-    <!-- МЕНЮ -->
-    <div id="menu" style="display:flex; flex-direction:column; align-items:center; height:100vh; justify-content:center;">
-        <h1 style="color:#00f0ff; font-size: 24px;">PIXEL ARENA</h1>
-        <button class="btn" onclick="startHost()">ХОСТ (ПК)</button>
-        <button class="btn bg-pink-500" onclick="startClient()">P2 (ТЕЛЕФОН)</button>
+    <div class="ui">
+        <button onclick="init('sonic.bin')">ИГРАТЬ (HOST)</button>
+        <button onclick="showController()" class="bg-pink-500">ДЖОЙСТИК (P2)</button>
     </div>
 
-    <!-- ИГРА -->
-    <div id="game-overlay">
-        <div id="game-container"></div>
-    </div>
-
-    <!-- ДЖОЙСТИК -->
-    <div id="controller-ui">
-        <button onclick="sendBtn('UP')" class="btn">UP</button>
-        <button onclick="sendBtn('DOWN')" class="btn">DOWN</button>
-        <button onclick="sendBtn('A')" class="btn" style="background:red; color:white">A</button>
-    </div>
+    <div id="game-container"></div>
 
     <script>
-        // ❌ ВСТАВЬ СЮДА КЛЮЧИ ИЗ FIREBASE ❌
-        const firebaseConfig = { projectId: "studio-8235565247-f8a50", appId: "1:924081428998:web:8c62d7a8df8676cb7e8187", apiKey: "AIzaSyBJUydsDT4euRjy5A1EIEQWMtud91FPEFo", authDomain: "studio-8235565247-f8a50.firebaseapp.com", messagingSenderId: "924081428998" };
-        firebase.initializeApp(firebaseConfig);
+        // Твои ключи из Firebase
+        const config = { projectId: "studio-8235565247-f8a50", appId: "1:924081428998:web:8c62d7a8df8676cb7e8187", apiKey: "AIzaSyBJUydsDT4euRjy5A1EIEQWMtud91FPEFo", authDomain: "studio-8235565247-f8a50.firebaseapp.com", messagingSenderId: "924081428998" };
+        firebase.initializeApp(config);
         const db = firebase.firestore();
-        const LOBBY = "ROOM1";
 
-        // Инициализация Telegram
-        if (window.Telegram && window.Telegram.WebApp) {
-            window.Telegram.WebApp.ready();
-            window.Telegram.WebApp.expand();
-        }
-
-        // ХОСТ: ЗАПУСК + BRIDGE
-        window.startHost = () => {
-            document.getElementById('menu').style.display = 'none';
-            document.getElementById('game-overlay').style.display = 'flex';
-
-            // 1. Запуск EmulatorJS
+        // ЗАПУСК ЭМУЛЯТОРА
+        window.init = (rom) => {
             window.EJS_player = '#game-container';
             window.EJS_core = 'sega';
-            window.EJS_gameUrl = '/sonic.bin';
-            window.EJS_pathtodata = '/data/';
+            window.EJS_gameUrl = '/' + rom;
+            window.EJS_pathtodata = '/data/'; // EmulatorJS ищет всё в /data/
+            
             const s = document.createElement('script');
             s.src = '/data/loader.js';
             document.body.appendChild(s);
 
-            // 2. Мост (Слушаем Firebase и бьем прямо в ArenaBridge)
-            db.collection("lobbies").doc(LOBBY).onSnapshot(doc => {
+            // СЛУШАЕМ Firebase (только для Хоста)
+            db.collection("lobbies").doc("ROOM1").onSnapshot(doc => {
                 const d = doc.data();
-                if(d && d.btn && window.ArenaBridge) {
-                    console.log("Мост получил команду:", d.btn);
-                    window.ArenaBridge.press(d.btn);
+                if(d && d.btn) {
+                    // Эмулятор слушает клавиатуру. Имитируем её!
+                    window.dispatchEvent(new KeyboardEvent('keydown', { code: d.btn }));
+                    setTimeout(() => window.dispatchEvent(new KeyboardEvent('keyup', { code: d.btn })), 100);
                 }
             });
         };
 
-        // КЛИЕНТ: ТОЛЬКО ДЖОЙСТИК
-        window.startClient = () => {
-            document.getElementById('menu').style.display = 'none';
-            document.getElementById('controller-ui').style.display = 'flex';
-        };
-
-        window.sendBtn = (btn) => {
-            db.collection("lobbies").doc(LOBBY).update({ btn: btn, ts: Date.now() });
+        // ДЖОЙСТИК
+        window.showController = () => {
+            document.body.innerHTML = `
+                <button onclick="db.collection('lobbies').doc('ROOM1').update({btn: 'ArrowUp'})" style="padding:50px; background:red;">UP</button>
+                <button onclick="db.collection('lobbies').doc('ROOM1').update({btn: 'KeyX'})" style="padding:50px; background:blue;">A</button>
+            `;
         };
     </script>
 </body>
