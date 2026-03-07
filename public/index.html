@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Pixel Arena v4</title>
+    <title>Pixel Arena - Custom Lobbies</title>
     
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -14,102 +14,108 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
     <style>
-        body { background: #09090b; color: white; font-family: monospace; margin: 0; overflow: hidden; touch-action: none; }
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Space+Mono:wght@400;700&display=swap');
+        body { background: #09090b; color: white; font-family: 'Space Mono', monospace; margin: 0; overflow: hidden; touch-action: none; }
         
-        .tab-btn { flex: 1; padding: 15px; font-weight: bold; color: #555; background: #111; border: none; text-transform: uppercase; font-size: 12px; cursor: pointer; }
-        .tab-btn.active { color: #00f0ff; background: #1a1a1d; border-bottom: 2px solid #00f0ff; }
+        .font-retro { font-family: 'Orbitron', sans-serif; }
         
-        .game-card { background: #18181b; padding: 15px; border-radius: 12px; border: 1px solid #333; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        .btn-play { background: #00f0ff; color: black; padding: 8px 15px; border-radius: 6px; font-weight: bold; border: none; cursor: pointer; }
-        .btn-host { background: #ff003c; color: white; padding: 8px 15px; border-radius: 6px; font-weight: bold; border: none; cursor: pointer; }
-        
-        #game-overlay { position: fixed; inset: 0; background: #000; z-index: 1000; display: none; flex-direction: column; }
+        .btn { padding: 15px; border-radius: 8px; font-weight: bold; text-transform: uppercase; cursor: pointer; border: none; width: 100%; transition: 0.2s; }
+        .btn:active { transform: scale(0.95); }
+        .btn-blue { background: #00f0ff; color: black; }
+        .btn-red { background: #ff003c; color: white; }
+        .btn-green { background: #00ff66; color: black; }
+        .btn-dark { background: #27272a; color: white; border: 1px solid #3f3f46; }
+
+        input, select { width: 100%; padding: 15px; background: #18181b; border: 1px solid #3f3f46; color: white; border-radius: 8px; font-family: inherit; font-size: 16px; outline: none; }
+        input:focus, select:focus { border-color: #00f0ff; }
+
+        /* Контейнеры экранов */
+        .screen { display: none; flex-direction: column; height: 100vh; padding: 20px; }
+        .screen.active { display: flex; }
+
+        /* Эмулятор */
+        #game-overlay { display: none; position: fixed; inset: 0; background: #000; z-index: 1000; flex-direction: column; }
         #game-container { width: 100%; height: 100%; flex: 1; }
 
         /* Джойстик */
-        #controller-overlay { display: none; height: 100vh; background: #000; flex-direction: column; align-items: center; justify-content: center; gap: 50px; }
+        #controller-overlay { display: none; height: 100vh; background: #000; flex-direction: column; align-items: center; justify-content: center; gap: 40px; }
         .dpad-btn { width: 65px; height: 65px; background: #222; border-radius: 12px; color: white; font-size: 24px; border: 1px solid #444; }
         .dpad-btn:active { background: #00f0ff; color: black; }
         .action-btn { width: 75px; height: 75px; border-radius: 50%; font-weight: bold; font-size: 24px; color: white; border: none; }
         .action-btn:active { transform: scale(0.9); }
     </style>
 </head>
-<body class="flex flex-col h-screen">
+<body>
 
-    <!-- ШАПКА -->
-    <header class="p-4 bg-zinc-950 flex justify-between items-center border-b border-white/10">
-        <h1 class="text-white font-bold text-xl italic text-[#00f0ff]">ARENA<span class="text-white">X</span></h1>
-        <div class="flex items-center gap-2 bg-zinc-900 px-3 py-1 rounded-full border border-white/10">
-            <span class="text-xs font-bold text-white">Игрок 1</span>
+    <!-- ЭКРАН 1: ГЛАВНОЕ МЕНЮ -->
+    <div id="screen-menu" class="screen active">
+        <div class="text-center mt-10 mb-10">
+            <h1 class="text-3xl font-retro italic text-[#00f0ff]">ARENA<span class="text-white">X</span></h1>
+            <p class="text-gray-500 text-xs mt-2 uppercase tracking-widest">Multiplayer Network</p>
         </div>
-    </header>
 
-    <!-- ВКЛАДКИ -->
-    <div class="flex">
-        <button id="tab-arcade" class="tab-btn active" onclick="switchTab('arcade')">ИГРЫ</button>
-        <button id="tab-lobbies" class="tab-btn" onclick="switchTab('lobbies')">ЛОББИ <span id="lobby-count" class="bg-red-500 text-white px-2 py-0.5 rounded-full text-[10px] ml-1">0</span></button>
+        <div class="space-y-4 max-w-sm mx-auto w-full">
+            <button onclick="createLobby()" class="btn btn-blue">СОЗДАТЬ ЛОББИ (ХОСТ)</button>
+            
+            <div class="relative py-4">
+                <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-zinc-800"></div></div>
+                <div class="relative flex justify-center"><span class="bg-[#09090b] px-4 text-xs text-gray-500">ИЛИ</span></div>
+            </div>
+
+            <input id="join-input" type="text" placeholder="ВВЕДИТЕ ID КОМНАТЫ" class="text-center uppercase font-bold" maxlength="5">
+            <button onclick="joinLobby()" class="btn btn-red">ПОДКЛЮЧИТЬСЯ (ИГРОК 2)</button>
+        </div>
     </div>
 
-    <!-- СПИСОК ИГР -->
-    <main id="screen-arcade" class="flex-1 overflow-y-auto p-4">
+    <!-- ЭКРАН 2: КОМНАТА ЛОББИ (ВЫБОР ИГРЫ И ГОТОВНОСТЬ) -->
+    <div id="screen-lobby-room" class="screen">
+        <h2 class="text-center text-xl font-bold text-white mb-2">ЛОББИ: <span id="room-id-display" class="text-[#00f0ff] tracking-widest"></span></h2>
         
-        <!-- BATTLETOADS -->
-        <div class="game-card border-l-4 border-l-green-500">
+        <div class="bg-zinc-900 p-4 rounded-xl border border-white/10 space-y-4 mb-6">
+            <!-- Выбор игры (активен только для хоста) -->
             <div>
-                <h3 class="font-bold text-sm">BATTLETOADS</h3>
-                <p class="text-[10px] text-gray-500">Кооператив • 2 Игрока</p>
+                <label class="text-xs text-gray-500 uppercase font-bold">Выбор игры:</label>
+                <select id="game-select" onchange="updateGameSelection()" disabled>
+                    <option value="battletoads.md">Battletoads & Double Dragon</option>
+                    <option value="umk3.md">Ultimate Mortal Kombat 3</option>
+                    <option value="roadrash.md">Road Rash</option>
+                </select>
             </div>
-            <div class="flex gap-2">
-                <button onclick="startGame('battletoads.md')" class="btn-play">SOLO</button>
-                <button onclick="hostGame('battletoads.md', 'Battletoads')" class="btn-host">HOST P1</button>
+
+            <!-- Статусы игроков -->
+            <div class="flex justify-between items-center bg-black p-3 rounded-lg border border-zinc-800">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="monitor" class="w-4 h-4 text-gray-500"></i>
+                    <span class="text-sm font-bold">ИГРОК 1 (ХОСТ)</span>
+                </div>
+                <span id="status-p1" class="text-xs font-bold text-yellow-500">ОЖИДАЕТ</span>
+            </div>
+
+            <div class="flex justify-between items-center bg-black p-3 rounded-lg border border-zinc-800">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="smartphone" class="w-4 h-4 text-gray-500"></i>
+                    <span id="name-p2" class="text-sm font-bold text-gray-500">ОЖИДАНИЕ ИГРОКА 2...</span>
+                </div>
+                <span id="status-p2" class="text-xs font-bold text-gray-700">---</span>
             </div>
         </div>
 
-        <!-- UMK3 -->
-        <div class="game-card border-l-4 border-l-red-500">
-            <div>
-                <h3 class="font-bold text-sm">ULTIMATE MK 3</h3>
-                <p class="text-[10px] text-gray-500">Файтинг • 2 Игрока</p>
-            </div>
-            <div class="flex gap-2">
-                <button onclick="startGame('umk3.md')" class="btn-play">SOLO</button>
-                <button onclick="hostGame('umk3.md', 'Mortal Kombat')" class="btn-host">HOST P1</button>
-            </div>
-        </div>
+        <button id="btn-ready" onclick="toggleReady()" class="btn btn-dark mt-auto mb-10">Я ГОТОВ</button>
+    </div>
 
-        <!-- SONIC -->
-        <div class="game-card border-l-4 border-l-blue-500">
-            <div>
-                <h3 class="font-bold text-sm">SONIC THE HEDGEHOG</h3>
-                <p class="text-[10px] text-gray-500">Соло прохождение</p>
-            </div>
-            <div class="flex gap-2">
-                <button onclick="startGame('sonic.bin')" class="btn-play w-full">ИГРАТЬ SOLO</button>
-            </div>
-        </div>
-    </main>
-
-    <!-- СПИСОК ЛОББИ -->
-    <main id="screen-lobbies" class="hidden flex-1 overflow-y-auto p-4">
-        <div id="lobbies-list" class="space-y-2">
-            <p class="text-center text-gray-500 text-xs mt-10">Поиск активных комнат...</p>
-        </div>
-    </main>
-
-    <!-- ЭКРАН ЭМУЛЯТОРА (HOST) -->
+    <!-- ЭКРАН 3: ЭМУЛЯТОР (ДЛЯ ХОСТА) -->
     <div id="game-overlay">
         <div class="h-12 bg-zinc-900 flex justify-between items-center px-4 border-b border-[#00f0ff]/30">
-            <span id="game-tag" class="text-xs font-bold text-[#00f0ff]">SOLO MODE</span>
-            <button onclick="location.reload()" class="bg-red-600 text-white px-3 py-1 rounded text-xs font-bold">ЗАКРЫТЬ</button>
+            <span class="text-xs font-bold text-[#00f0ff]">P1 СЕРВЕР ЗАПУЩЕН</span>
+            <span class="text-[10px] text-gray-400">Выберите '2 Players' в меню игры</span>
         </div>
         <div id="game-container"></div>
     </div>
 
-    <!-- ВИРТУАЛЬНЫЙ ДЖОЙСТИК (P2) -->
+    <!-- ЭКРАН 4: ДЖОЙСТИК (ДЛЯ P2) -->
     <div id="controller-overlay">
         <div class="text-center">
-            <span class="bg-pink-600 text-white text-xs font-bold px-4 py-1 rounded-full animate-pulse">P2 АКТИВЕН</span>
-            <p id="controller-game-name" class="text-gray-500 text-xs mt-2">Игра...</p>
+            <span class="bg-pink-600 text-white text-xs font-bold px-4 py-1 rounded-full animate-pulse">ДЖОЙСТИК P2</span>
         </div>
         
         <div style="display: grid; grid-template-columns: repeat(3, 65px); gap: 10px;">
@@ -138,13 +144,14 @@
             authDomain: "ТВОЙ_ПРОЕКТ.firebaseapp.com"
         };
 
-        let db, currentLobby = null, isHost = false;
+        let db, currentLobby = null, isHost = false, isReady = false;
         
-        // Карта кнопок P2 (Настроено так, чтобы не мешать P1 на клавиатуре)
-        // I, K, J, L - Крестовина. F, G, H - Кнопки ABC. V - Старт.
+        // Карта кнопок P2 (Клавиши по умолчанию для EmulatorJS P2)
         const p2map = { UP: "KeyI", DOWN: "KeyK", LEFT: "KeyJ", RIGHT: "KeyL", A: "KeyF", B: "KeyG", C: "KeyH", START: "KeyV" };
 
         document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            
             if (window.Telegram && window.Telegram.WebApp) {
                 window.Telegram.WebApp.ready();
                 window.Telegram.WebApp.expand();
@@ -153,122 +160,184 @@
             try {
                 firebase.initializeApp(firebaseConfig);
                 db = firebase.firestore();
-                listenForLobbies(); // Запускаем поиск комнат
             } catch(e) { console.error("Firebase error"); }
-
-            window.switchTab = function(tab) {
-                document.getElementById('screen-arcade').style.display = tab === 'arcade' ? 'block' : 'none';
-                document.getElementById('screen-lobbies').style.display = tab === 'lobbies' ? 'block' : 'none';
-                document.getElementById('tab-arcade').className = tab === 'arcade' ? 'tab-btn active' : 'tab-btn';
-                document.getElementById('tab-lobbies').className = tab === 'lobbies' ? 'tab-btn active' : 'tab-btn';
-            };
-
-            function launchEmulator(romName) {
-                document.getElementById('screen-arcade').style.display = 'none';
-                document.getElementById('game-overlay').style.display = 'flex';
-
-                window.EJS_player = '#game-container';
-                window.EJS_core = 'sega';
-                window.EJS_gameUrl = '/' + romName;
-                window.EJS_pathtodata = '/data/';
-
-                const script = document.createElement('script');
-                script.src = '/data/loader.js';
-                document.body.appendChild(script);
-            }
-
-            window.startGame = function(romName) {
-                launchEmulator(romName);
-            };
-
-            window.hostGame = function(romName, gameTitle) {
-                if(!db) return alert("Firebase не подключен!");
-                isHost = true;
-                currentLobby = Math.random().toString(36).substring(2, 8).toUpperCase();
-                
-                document.getElementById('game-tag').innerText = "ХОСТ: " + currentLobby;
-                
-                // Создаем лобби в Firebase
-                db.collection("lobbies").doc(currentLobby).set({ 
-                    title: gameTitle, 
-                    rom: romName, 
-                    status: "open", 
-                    createdAt: Date.now(),
-                    controller2: null 
-                });
-
-                // Слушаем нажатия джойстика
-                db.collection("lobbies").doc(currentLobby).onSnapshot(doc => {
-                    const d = doc.data();
-                    if(d && d.controller2) {
-                        const code = p2map[d.controller2.btn];
-                        if(code) {
-                            window.dispatchEvent(new KeyboardEvent(d.controller2.state ? 'keydown' : 'keyup', { code: code }));
-                        }
-                    }
-                });
-
-                launchEmulator(romName);
-            };
-
-            window.joinGame = function(lobbyId, gameTitle) {
-                currentLobby = lobbyId;
-                isHost = false;
-                
-                document.getElementById('screen-lobbies').style.display = 'none';
-                document.getElementById('controller-overlay').style.display = 'flex';
-                document.getElementById('controller-game-name').innerText = "Подключен к: " + gameTitle;
-            };
-
-            // Функция поиска живых лобби
-            function listenForLobbies() {
-                if(!db) return;
-                db.collection("lobbies").where("status", "==", "open").onSnapshot(snapshot => {
-                    const list = document.getElementById('lobbies-list');
-                    document.getElementById('lobby-count').innerText = snapshot.size;
-                    
-                    if(snapshot.empty) {
-                        list.innerHTML = '<p class="text-center text-gray-500 text-xs mt-10">Нет активных игр. Создай свою!</p>';
-                        return;
-                    }
-                    
-                    list.innerHTML = '';
-                    snapshot.forEach(doc => {
-                        const l = doc.data();
-                        list.innerHTML += `
-                            <div class="game-card">
-                                <div>
-                                    <h3 class="font-bold text-[#00f0ff] uppercase">${l.title}</h3>
-                                    <p class="text-[10px] text-gray-400">Хост ID: ${doc.id}</p>
-                                </div>
-                                <button onclick="joinGame('${doc.id}', '${l.title}')" class="btn-play bg-pink-600 text-white">ВОЙТИ P2</button>
-                            </div>
-                        `;
-                    });
-                });
-            }
-
-            // Отправка нажатий с джойстика
-            function bindBtn(id, btnName) {
-                const el = document.getElementById(id);
-                const send = (state) => {
-                    if(currentLobby && db && !isHost) {
-                        db.collection("lobbies").doc(currentLobby).update({
-                            controller2: { btn: btnName, state: state, ts: Date.now() }
-                        });
-                        if (state && window.Telegram && window.Telegram.WebApp) {
-                            window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
-                        }
-                    }
-                };
-                el.addEventListener('pointerdown', e => { e.preventDefault(); send(true); });
-                el.addEventListener('pointerup', e => { e.preventDefault(); send(false); });
-                el.addEventListener('pointerleave', e => { e.preventDefault(); send(false); });
-            }
-
-            bindBtn('p-up', 'UP'); bindBtn('p-down', 'DOWN'); bindBtn('p-left', 'LEFT'); bindBtn('p-right', 'RIGHT');
-            bindBtn('p-a', 'A'); bindBtn('p-b', 'B'); bindBtn('p-c', 'C'); bindBtn('p-start', 'START');
         });
+
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            if(document.getElementById(screenId)) document.getElementById(screenId).classList.add('active');
+        }
+
+        // ==========================================
+        // ЛОГИКА ЛОББИ
+        // ==========================================
+
+        window.createLobby = function() {
+            if(!db) return alert("Firebase не подключен!");
+            isHost = true;
+            // Генерируем простой ID из 4 символов
+            currentLobby = Math.random().toString(36).substring(2, 6).toUpperCase();
+            
+            document.getElementById('room-id-display').innerText = currentLobby;
+            document.getElementById('game-select').disabled = false; // Хост может выбирать игру
+            
+            // Создаем документ в базе
+            db.collection("lobbies").doc(currentLobby).set({ 
+                game: document.getElementById('game-select').value,
+                p1Ready: false,
+                p2Joined: false,
+                p2Ready: false,
+                state: "waiting", // waiting -> playing
+                controller2: null 
+            });
+
+            startLobbyListener();
+            showScreen('screen-lobby-room');
+        };
+
+        window.joinLobby = function() {
+            const input = document.getElementById('join-input').value.trim().toUpperCase();
+            if(input.length !== 4) return alert("Введите корректный ID из 4 символов");
+            
+            currentLobby = input;
+            isHost = false;
+
+            // Проверяем существует ли лобби
+            db.collection("lobbies").doc(currentLobby).get().then((doc) => {
+                if (doc.exists && doc.data().state === "waiting") {
+                    document.getElementById('room-id-display').innerText = currentLobby;
+                    document.getElementById('game-select').disabled = true; // P2 не может менять игру
+                    
+                    // Обновляем статус, что P2 подключился
+                    db.collection("lobbies").doc(currentLobby).update({ p2Joined: true });
+                    
+                    startLobbyListener();
+                    showScreen('screen-lobby-room');
+                } else {
+                    alert("Лобби не найдено или игра уже началась!");
+                }
+            });
+        };
+
+        // Хост меняет игру в выпадающем списке
+        window.updateGameSelection = function() {
+            if(isHost && currentLobby) {
+                const selectedGame = document.getElementById('game-select').value;
+                db.collection("lobbies").doc(currentLobby).update({ game: selectedGame });
+            }
+        };
+
+        // Кнопка "Я ГОТОВ"
+        window.toggleReady = function() {
+            isReady = !isReady;
+            const btn = document.getElementById('btn-ready');
+            
+            if(isReady) {
+                btn.classList.remove('btn-dark');
+                btn.classList.add('btn-green');
+                btn.innerText = "ВЫ ГОТОВЫ";
+            } else {
+                btn.classList.remove('btn-green');
+                btn.classList.add('btn-dark');
+                btn.innerText = "Я ГОТОВ";
+            }
+
+            if (isHost) {
+                db.collection("lobbies").doc(currentLobby).update({ p1Ready: isReady });
+            } else {
+                db.collection("lobbies").doc(currentLobby).update({ p2Ready: isReady });
+            }
+        };
+
+        // Слушатель событий в комнате
+        function startLobbyListener() {
+            db.collection("lobbies").doc(currentLobby).onSnapshot(doc => {
+                if(!doc.exists) return;
+                const d = doc.data();
+
+                // Обновление интерфейса лобби
+                if (!isHost) document.getElementById('game-select').value = d.game; // P2 видит выбор Хоста
+
+                if (d.p2Joined) {
+                    document.getElementById('name-p2').innerText = "ИГРОК 2 ПОДКЛЮЧЕН";
+                    document.getElementById('name-p2').classList.replace('text-gray-500', 'text-white');
+                }
+
+                // Статусы готовности
+                document.getElementById('status-p1').innerText = d.p1Ready ? "ГОТОВ" : "ОЖИДАЕТ";
+                document.getElementById('status-p1').className = d.p1Ready ? "text-xs font-bold text-green-500" : "text-xs font-bold text-yellow-500";
+                
+                document.getElementById('status-p2').innerText = d.p2Ready ? "ГОТОВ" : (d.p2Joined ? "ОЖИДАЕТ" : "---");
+                document.getElementById('status-p2').className = d.p2Ready ? "text-xs font-bold text-green-500" : (d.p2Joined ? "text-xs font-bold text-yellow-500" : "text-xs font-bold text-gray-700");
+
+                // ЕСЛИ ОБА ГОТОВЫ И ИГРА ЕЩЕ НЕ НАЧАЛАСЬ -> ЗАПУСКАЕМ ИГРУ
+                if (d.p1Ready && d.p2Ready && d.state === "waiting") {
+                    if(isHost) {
+                        // Хост дает команду на старт
+                        db.collection("lobbies").doc(currentLobby).update({ state: "playing" });
+                    }
+                }
+
+                // ЗАПУСК ЭКРАНОВ ИГРЫ
+                if (d.state === "playing") {
+                    document.getElementById('screen-lobby-room').classList.remove('active');
+                    if(isHost) {
+                        launchEmulatorHost(d.game);
+                    } else {
+                        launchJoystickClient();
+                    }
+                }
+
+                // Обработка нажатий кнопок во время игры (только для Хоста)
+                if (isHost && d.state === "playing" && d.controller2) {
+                    const code = p2map[d.controller2.btn];
+                    if(code) {
+                        window.dispatchEvent(new KeyboardEvent(d.controller2.state ? 'keydown' : 'keyup', { code: code }));
+                    }
+                }
+            });
+        }
+
+        // ==========================================
+        // ДВИЖОК ЭМУЛЯТОРА И ДЖОЙСТИК
+        // ==========================================
+
+        function launchEmulatorHost(romName) {
+            document.getElementById('game-overlay').style.display = 'flex';
+            window.EJS_player = '#game-container';
+            window.EJS_core = 'sega';
+            window.EJS_gameUrl = '/' + romName;
+            window.EJS_pathtodata = '/data/';
+
+            const script = document.createElement('script');
+            script.src = '/data/loader.js';
+            document.body.appendChild(script);
+        }
+
+        function launchJoystickClient() {
+            document.getElementById('controller-overlay').style.display = 'flex';
+        }
+
+        // Привязка кнопок
+        function bindBtn(id, btnName) {
+            const el = document.getElementById(id);
+            const send = (state) => {
+                if(currentLobby && db && !isHost) {
+                    db.collection("lobbies").doc(currentLobby).update({
+                        controller2: { btn: btnName, state: state, ts: Date.now() }
+                    });
+                    if (state && window.Telegram && window.Telegram.WebApp) {
+                        window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
+                    }
+                }
+            };
+            el.addEventListener('pointerdown', e => { e.preventDefault(); send(true); });
+            el.addEventListener('pointerup', e => { e.preventDefault(); send(false); });
+            el.addEventListener('pointerleave', e => { e.preventDefault(); send(false); });
+        }
+
+        bindBtn('p-up', 'UP'); bindBtn('p-down', 'DOWN'); bindBtn('p-left', 'LEFT'); bindBtn('p-right', 'RIGHT');
+        bindBtn('p-a', 'A'); bindBtn('p-b', 'B'); bindBtn('p-c', 'C'); bindBtn('p-start', 'START');
     </script>
 </body>
 </html>
