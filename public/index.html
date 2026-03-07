@@ -2,61 +2,77 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Pixel Arena</title>
-    <!-- Firebase -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <title>P2P Pixel Arena</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { margin: 0; background: #000; color: #fff; font-family: sans-serif; overflow: hidden; }
-        #game-container { width: 100vw; height: 100vh; }
-        .ui { position: fixed; top: 20px; left: 20px; z-index: 999; }
-        button { background: #00f0ff; padding: 15px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; }
+        body { background: #000; color: #fff; text-align: center; font-family: monospace; }
+        .btn { background: #00f0ff; color: #000; padding: 20px; border-radius: 8px; width: 80%; font-weight: bold; margin: 10px; cursor: pointer; }
     </style>
 </head>
 <body>
-
-    <div class="ui">
-        <button onclick="init('sonic.bin')">ИГРАТЬ (HOST)</button>
-        <button onclick="showController()" class="bg-pink-500">ДЖОЙСТИК (P2)</button>
+    <div id="menu" class="h-screen flex flex-col justify-center items-center">
+        <h1 class="text-2xl text-cyan-400 mb-6">P2P ARENA</h1>
+        <button class="btn" onclick="initHost()">СОЗДАТЬ ИГРУ</button>
+        <button class="btn bg-pink-500" onclick="initJoin()">ВОЙТИ В ИГРУ</button>
     </div>
 
-    <div id="game-container"></div>
+    <div id="game-container" class="hidden w-screen h-screen"></div>
 
     <script>
-        // Твои ключи из Firebase
-        const config = { projectId: "studio-8235565247-f8a50", appId: "1:924081428998:web:8c62d7a8df8676cb7e8187", apiKey: "AIzaSyBJUydsDT4euRjy5A1EIEQWMtud91FPEFo", authDomain: "studio-8235565247-f8a50.firebaseapp.com", messagingSenderId: "924081428998" };
-        firebase.initializeApp(config);
-        const db = firebase.firestore();
+        let pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+        let channel;
 
-        // ЗАПУСК ЭМУЛЯТОРА
-        window.init = (rom) => {
-            window.EJS_player = '#game-container';
-            window.EJS_core = 'sega';
-            window.EJS_gameUrl = '/' + rom;
-            window.EJS_pathtodata = '/data/'; // EmulatorJS ищет всё в /data/
+        // ХОСТ
+        async function initHost() {
+            channel = pc.createDataChannel("game");
+            channel.onmessage = e => {
+                const code = { "A": "KeyX", "B": "KeyZ", "UP": "ArrowUp" }[e.data];
+                window.dispatchEvent(new KeyboardEvent('keydown', { code }));
+                setTimeout(() => window.dispatchEvent(new KeyboardEvent('keyup', { code })), 100);
+            };
+
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
             
-            const s = document.createElement('script');
-            s.src = '/data/loader.js';
-            document.body.appendChild(s);
-
-            // СЛУШАЕМ Firebase (только для Хоста)
-            db.collection("lobbies").doc("ROOM1").onSnapshot(doc => {
-                const d = doc.data();
-                if(d && d.btn) {
-                    // Эмулятор слушает клавиатуру. Имитируем её!
-                    window.dispatchEvent(new KeyboardEvent('keydown', { code: d.btn }));
-                    setTimeout(() => window.dispatchEvent(new KeyboardEvent('keyup', { code: d.btn })), 100);
+            // Ждем соединения
+            pc.onicecandidate = e => {
+                if(!e.candidate) {
+                    const offerBase64 = btoa(JSON.stringify(pc.localDescription));
+                    prompt("Скопируй это другу:", offerBase64);
+                    // Запуск эмулятора
+                    window.EJS_player = '#game-container';
+                    window.EJS_core = 'sega';
+                    window.EJS_gameUrl = '/sonic.bin';
+                    window.EJS_pathtodata = '/data/';
+                    const s = document.createElement('script'); s.src = '/data/loader.js'; document.body.appendChild(s);
+                    document.getElementById('menu').style.display = 'none';
                 }
-            });
-        };
+            };
+        }
 
-        // ДЖОЙСТИК
-        window.showController = () => {
-            document.body.innerHTML = `
-                <button onclick="db.collection('lobbies').doc('ROOM1').update({btn: 'ArrowUp'})" style="padding:50px; background:red;">UP</button>
-                <button onclick="db.collection('lobbies').doc('ROOM1').update({btn: 'KeyX'})" style="padding:50px; background:blue;">A</button>
-            `;
-        };
+        // КЛИЕНТ
+        async function initJoin() {
+            const offerBase64 = prompt("Вставь код друга:");
+            await pc.setRemoteDescription(JSON.parse(atob(offerBase64)));
+            
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+            
+            pc.onicecandidate = e => {
+                if(!e.candidate) {
+                    prompt("Скопируй ответ:", btoa(JSON.stringify(pc.localDescription)));
+                }
+            };
+
+            pc.ondatachannel = e => {
+                channel = e.channel;
+                document.body.innerHTML = `
+                    <div class="h-screen flex flex-col gap-4 p-10">
+                        <button class="btn" onpointerdown="channel.send('UP')">UP</button>
+                        <button class="btn" onpointerdown="channel.send('A')" style="background:red">A</button>
+                    </div>`;
+            };
+        }
     </script>
 </body>
 </html>
