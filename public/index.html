@@ -2,80 +2,76 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Pixel Arena - Direct Core</title>
+    <title>Pixel Arena - Matrix Hack</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <style>
-        body { margin: 0; background: #000; overflow: hidden; }
-        /* Канвас должен быть в фокусе */
-        canvas { width: 100vw; height: 100vh; display: block; image-rendering: pixelated; }
-        
-        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
-        .menu-btn { pointer-events: auto; padding: 20px; background: #00f0ff; font-weight: bold; margin: 10px; border: none; cursor: pointer; }
-        .hidden { display: none; }
-        
-        /* Стили джойстика */
-        #joystick { display: none; position: absolute; bottom: 20px; width: 100%; justify-content: center; gap: 20px; pointer-events: auto; }
-        .j-btn { width: 80px; height: 80px; background: rgba(255,255,255,0.2); border: 2px solid white; border-radius: 50%; color: white; font-weight: bold; user-select: none; }
-        .j-btn:active { background: #00f0ff; }
+        body { background: #000; color: #fff; margin: 0; overflow: hidden; }
+        #game-container { width: 100vw; height: 100vh; }
+        .ui { position: fixed; top: 10px; left: 10px; z-index: 100; }
+        button { padding: 20px; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
 
-    <!-- КАНВАС ДЛЯ ЯДРА (ОБЯЗАТЕЛЬНО ID="game-container") -->
-    <canvas id="game-container" tabindex="1"></canvas>
+    <div class="ui" id="menu">
+        <button onclick="host()">ХОСТ (ПК)</button>
+        <button onclick="client()">ДЖОЙСТИК (ТЕЛЕФОН)</button>
+    </div>
 
-    <div id="ui-layer">
-        <div id="main-menu" style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%;">
-            <h1 style="color:#fff; font-family:monospace;">SEGA NATIVE CORE</h1>
-            <button class="menu-btn" onclick="startHost()">HOST (PC)</button>
-            <button class="menu-btn" style="background:#ff0055; color:white;" onclick="startClient()">PLAYER 2 (PHONE)</button>
-        </div>
+    <div id="game-container"></div>
 
-        <div id="joystick">
-            <button class="j-btn" onpointerdown="sendInput('LEFT', true)" onpointerup="sendInput('LEFT', false)">L</button>
-            <button class="j-btn" onpointerdown="sendInput('RIGHT', true)" onpointerup="sendInput('RIGHT', false)">R</button>
-            <button class="j-btn" style="background:rgba(255,0,0,0.3)" onpointerdown="sendInput('A', true)" onpointerup="sendInput('A', false)">A</button>
-        </div>
+    <!-- Интерфейс джойстика (скрыт по умолчанию) -->
+    <div id="joy-ui" style="display:none; position:fixed; bottom:20px; width:100%; justify-content:center; gap:20px; z-index:200;">
+        <button onpointerdown="send(12, true)" onpointerup="send(12, false)">UP</button>
+        <button onpointerdown="send(13, true)" onpointerup="send(13, false)">DOWN</button>
+        <button onpointerdown="send(0, true)" onpointerup="send(0, false)" style="background:red">A</button>
     </div>
 
     <script>
-        // ❌ ТВОИ КЛЮЧИ ❌
-        const config = { projectId: "studio-8235565247-f8a50", appId: "1:924081428998:web:8c62d7a8df8676cb7e8187", apiKey: "AIzaSyBJUydsDT4euRjy5A1EIEQWMtud91FPEFo", authDomain: "studio-8235565247-f8a50.firebaseapp.com", messagingSenderId: "924081428998" };
-        firebase.initializeApp(config);
+        // ❌ ВСТАВЬ КЛЮЧИ FIREBASE ❌
+        const firebaseConfig = { projectId: "studio-8235565247-f8a50", appId: "1:924081428998:web:8c62d7a8df8676cb7e8187", apiKey: "AIzaSyBJUydsDT4euRjy5A1EIEQWMtud91FPEFo", authDomain: "studio-8235565247-f8a50.firebaseapp.com", messagingSenderId: "924081428998" };
+        firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
         const LOBBY = "ROOM1";
-        let isHost = false;
 
-        function startHost() {
-            document.getElementById('main-menu').style.display = 'none';
-            isHost = true;
-            
-            // Загружаем наш ПРОСТОЙ загрузчик
+        // ХОСТ
+        window.host = () => {
+            document.getElementById('menu').style.display = 'none';
+            // Запуск
+            window.EJS_player = '#game-container';
+            window.EJS_core = 'sega';
+            window.EJS_gameUrl = '/sonic.bin';
+            window.EJS_pathtodata = '/data/';
             const s = document.createElement('script');
-            s.src = '/data/simple-loader.js';
+            s.src = '/data/loader.js';
             document.body.appendChild(s);
 
-            // Слушаем Firebase и передаем в ядро
+            // Слушаем Firebase и меняем ВИРТУАЛЬНЫЙ ГЕЙМПАД
             db.collection("lobbies").doc(LOBBY).onSnapshot(doc => {
                 const d = doc.data();
-                if (d && d.btn && window.updateController) {
-                    // 1 = Игрок 2 (в массиве индексов)
-                    window.updateController(1, d.btn, d.pressed);
+                if(d && window.VirtualPad) {
+                    // btn - это индекс кнопки (0=A, 1=B, 12=UP...)
+                    // state - нажата (true) или нет (false)
+                    window.VirtualPad.buttons[d.btn] = { 
+                        pressed: d.state, 
+                        value: d.state ? 1 : 0 
+                    };
+                    window.VirtualPad.timestamp = Date.now(); // Обновляем время, чтобы эмулятор увидел изменение
                 }
             });
-        }
+        };
 
-        function startClient() {
-            document.getElementById('main-menu').style.display = 'none';
-            document.getElementById('joystick').style.display = 'flex';
-            isHost = false;
-        }
+        // КЛИЕНТ
+        window.client = () => {
+            document.getElementById('menu').style.display = 'none';
+            document.getElementById('joy-ui').style.display = 'flex';
+        };
 
-        window.sendInput = (btn, pressed) => {
-            db.collection("lobbies").doc(LOBBY).set({ 
-                btn: btn, 
-                pressed: pressed,
+        window.send = (btnIndex, isPressed) => {
+            db.collection("lobbies").doc(LOBBY).update({ 
+                btn: btnIndex, 
+                state: isPressed,
                 ts: Date.now() 
             });
         };
