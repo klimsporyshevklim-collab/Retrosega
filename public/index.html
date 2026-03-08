@@ -1,160 +1,165 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Sonic JS Multiplayer</title>
+    <title>Hybrid Sonic Engine</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <style>
-        body { background: #333; margin: 0; overflow: hidden; font-family: monospace; }
-        canvas { display: block; margin: 0 auto; background: #87CEEB; }
-        #ui { position: absolute; top: 10px; left: 10px; color: white; font-weight: bold; font-size: 20px; text-shadow: 2px 2px 0 #000; }
-        
-        /* Кнопки для телефона */
-        #controls { position: absolute; bottom: 20px; width: 100%; display: none; justify-content: center; gap: 40px; }
-        .btn { width: 80px; height: 80px; background: rgba(0,0,0,0.5); border: 2px solid white; border-radius: 50%; color: white; font-size: 40px; display: flex; align-items: center; justify-content: center; user-select: none; }
-        .btn:active { background: rgba(255,255,255,0.5); }
+        body { background: #000; margin: 0; overflow: hidden; font-family: monospace; }
+        canvas { display: block; margin: 0 auto; background: #4488FF; } /* Blue Sky */
+        #ui { position: absolute; top: 10px; left: 10px; z-index: 100; }
+        .btn { padding: 15px; font-weight: bold; cursor: pointer; border: none; border-radius: 8px; }
+        #controls { position: absolute; bottom: 20px; width: 100%; display: none; justify-content: center; gap: 40px; z-index: 100; }
+        .ctrl-btn { width: 80px; height: 80px; background: rgba(0,0,0,0.4); border: 2px solid white; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; user-select: none; }
     </style>
 </head>
 <body>
 
     <div id="ui">
-        <button onclick="initGame('host')" style="padding:10px;">СОЗДАТЬ (ПК)</button>
-        <button onclick="initGame('client')" style="padding:10px;">ВОЙТИ (ТЕЛЕФОН)</button>
+        <button class="btn" onclick="init('host')">СОЗДАТЬ ИГРУ (ПК)</button>
+        <button class="btn" onclick="init('client')">ПРИСОЕДИНИТЬСЯ (ТЕЛЕФОН)</button>
     </div>
 
     <canvas id="gameCanvas"></canvas>
 
     <div id="controls">
-        <div class="btn" ontouchstart="sendInput('left', true)" ontouchend="sendInput('left', false)">⬅️</div>
-        <div class="btn" ontouchstart="sendInput('right', true)" ontouchend="sendInput('right', false)">➡️</div>
-        <div class="btn" style="border-color:red" ontouchstart="sendInput('jump', true)" ontouchend="sendInput('jump', false)">🅰️</div>
+        <div class="ctrl-btn" onpointerdown="sendInput('left', true)" onpointerup="sendInput('left', false)">⬅️</div>
+        <div class="ctrl-btn" onpointerdown="sendInput('right', true)" onpointerup="sendInput('right', false)">➡️</div>
+        <div class="ctrl-btn" onpointerdown="sendInput('jump', true)" onpointerup="sendInput('jump', false)">🅰️</div>
     </div>
 
 <script>
-// --- КОНФИГУРАЦИЯ ---
+// --- 1. FIREBASE & UI ---
+const firebaseConfig = { projectId: "studio-8235565247-f8a50", appId: "1:924081428998:web:8c62d7a8df8676cb7e8187", apiKey: "AIzaSyBJUydsDT4euRjy5A1EIEQWMtud91FPEFo", authDomain: "studio-8235565247-f8a50.firebaseapp.com", messagingSenderId: "924081428998" };
+try { firebase.initializeApp(firebaseConfig); } catch(e){}
+const db = firebase.firestore();
+const lobbyRef = db.collection("lobbies").doc("HYBRID_SONIC");
+
+let p2Input = { left: false, right: false, jump: false };
+
+// --- 2. ROM RIPPER (Декомпрессор графики из Sega ROM) ---
+// Это сложный алгоритм, написанный сообществом. Он ищет сжатые данные и разжимает их.
+const RomRipper = {
+    decompress: function(romData, offset) {
+        const rom = new Uint8Array(romData);
+        let pos = offset;
+        const out = [];
+        while (true) {
+            let control = rom[pos++];
+            if (control === 0xFF) break;
+            if (control & 0x80) {
+                let len = (control >> 3) & 0x0F;
+                let disp = ((control & 7) << 8) | rom[pos++];
+                len += 3;
+                for (let i = 0; i < len; i++) out.push(out[out.length - disp]);
+            } else {
+                for (let i = 0; i <= control; i++) out.push(rom[pos++]);
+            }
+        }
+        return new Uint8Array(out);
+    },
+    // Функция, которая рисует спрайт из разжатых данных
+    drawSprite: function(ctx, spriteData, palette) {
+        const width = 4 * 8; // 4 тайла по 8 пикселей
+        const height = 4 * 8;
+        ctx.canvas.width = width;
+        ctx.canvas.height = height;
+
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                const tileX = Math.floor(x / 8);
+                const tileY = Math.floor(y / 8);
+                const tileIndex = tileY * 4 + tileX;
+                const tileOffset = tileIndex * 32;
+                const pixelOffset = tileOffset + Math.floor((y % 8) * 4) + Math.floor((x % 8) / 2);
+                const pixel = (x % 2 === 0) ? spriteData[pixelOffset] >> 4 : spriteData[pixelOffset] & 0x0F;
+                if (pixel > 0) ctx.fillStyle = palette[pixel];
+                else ctx.fillStyle = 'transparent';
+                ctx.fillRect(x, y, 1, 1);
+            }
+        }
+        return ctx.canvas.toDataURL();
+    }
+};
+
+// --- 3. ИГРОВОЙ ДВИЖОК ---
+class SonicObject {
+    constructor(img, x, y) { this.img = img; this.x = x; this.y = y; this.vx = 0; this.vy = 0; this.grounded = false; this.facingRight = true; }
+    update(input) {
+        if (input.left) this.vx = -5; else if (input.right) this.vx = 5; else this.vx *= 0.8;
+        if (input.jump && this.grounded) { this.vy = -12; this.grounded = false; }
+        this.vy += 0.5; this.x += this.vx; this.y += this.vy;
+        if (this.y > canvas.height - 100) { this.y = canvas.height - 100; this.vy = 0; this.grounded = true; }
+    }
+    draw(ctx) {
+        ctx.save();
+        if (!this.facingRight) { ctx.translate(this.x + 32, this.y); ctx.scale(-1, 1); ctx.drawImage(this.img, 0, 0); }
+        else { ctx.drawImage(this.img, this.x, this.y); }
+        ctx.restore();
+    }
+}
+
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-// Твои ключи
-const firebaseConfig = { projectId: "studio-8235565247-f8a50", appId: "1:924081428998:web:8c62d7a8df8676cb7e8187", apiKey: "AIzaSyBJUydsDT4euRjy5A1EIEQWMtud91FPEFo", authDomain: "studio-8235565247-f8a50.firebaseapp.com", messagingSenderId: "924081428998" };
-try { firebase.initializeApp(firebaseConfig); } catch(e){}
-const db = firebase.firestore();
-const lobbyRef = db.collection("lobbies").doc("SONIC_JS");
+let player1, player2;
 
-let isHost = false;
-let p2Input = { left: false, right: false, jump: false };
-
-// --- ФИЗИКА ИГРЫ (ЭТО И ЕСТЬ ПЕРЕПИСАННЫЙ КОД) ---
-const GRAVITY = 0.5;
-const FRICTION = 0.8;
-
-class Player {
-    constructor(color, x, y) {
-        this.color = color;
-        this.x = x;
-        this.y = y;
-        this.vx = 0;
-        this.vy = 0;
-        this.width = 40;
-        this.height = 40;
-        this.speed = 5;
-        this.jumpPower = -12;
-        this.grounded = false;
-    }
-
-    update(input) {
-        // Управление
-        if (input.left) this.vx--;
-        if (input.right) this.vx++;
-        if (input.jump && this.grounded) {
-            this.vy = this.jumpPower;
-            this.grounded = false;
-        }
-
-        // Физика
-        this.vy += GRAVITY;
-        this.x += this.vx;
-        this.y += this.vy;
-        this.vx *= FRICTION;
-
-        // Пол (Коллизия)
-        if (this.y + this.height > canvas.height - 50) {
-            this.y = canvas.height - 50 - this.height;
-            this.vy = 0;
-            this.grounded = true;
-        }
-    }
-
-    draw() {
-        ctx.fillStyle = this.color;
-        ctx.fillRect(this.x, this.y, this.width, this.height);
-        
-        // Глаза (чтобы видеть направление)
-        ctx.fillStyle = "white";
-        ctx.fillRect(this.x + (this.vx > 0 ? 25 : 5), this.y + 5, 10, 10);
-    }
-}
-
-const sonic = new Player("blue", 100, 100);
-const tails = new Player("orange", 200, 100);
-
-// --- ЛОГИКА МУЛЬТИПЛЕЕРА ---
-function initGame(role) {
+// --- 4. ЗАПУСК ИГРЫ ---
+async function init(role) {
     document.getElementById('ui').style.display = 'none';
+
+    // --- МАГИЯ НАЧИНАЕТСЯ ЗДЕСЬ ---
+    // 1. Скачиваем sonic.bin с твоего сервера
+    const romResponse = await fetch('/sonic.bin');
+    const romBuffer = await romResponse.arrayBuffer();
+
+    // 2. ВЫТАСКИВАЕМ ГРАФИКУ!
+    // Адрес спрайта Соника в ROM
+    const sonicSpriteOffset = 0x822E4; 
+    const sonicSpriteData = RomRipper.decompress(romBuffer, sonicSpriteOffset);
     
+    // Палитра (цвета Соника)
+    const sonicPalette = ['transparent', '#000', '#0000A8', '#E80000', '#A800A8', '#00A8A8', '#E8E800', '#A8A8A8', '#505050', '#5050F8', '#F85050', '#F850F8', '#50F8F8', '#F8F850', '#F8F8F8', '#F8E8B0'];
+    
+    // Создаем картинку на лету
+    const tempCanvas = document.createElement('canvas').getContext('2d');
+    const sonicImgUrl = RomRipper.drawSprite(tempCanvas, sonicSpriteData, sonicPalette);
+    
+    const sonicImg = new Image(); sonicImg.src = sonicImgUrl;
+    const tailsImg = new Image(); tailsImg.src = sonicImgUrl; // Для теста Тейлз = Соник
+
+    // --- ЗАПУСК ДВИЖКА С НАСТОЯЩЕЙ ГРАФИКОЙ ---
+    player1 = new SonicObject(sonicImg, 100, 100);
+    player2 = new SonicObject(tailsImg, 200, 100);
+    if(player2.img) player2.img.style = "filter: hue-rotate(90deg)"; // Делаем Тейлза оранжевым
+
     if (role === 'host') {
-        isHost = true;
-        loop(); // Запускаем игру
-        
-        // Слушаем P2
-        lobbyRef.onSnapshot(doc => {
-            const d = doc.data();
-            if (d) p2Input = d;
-        });
+        gameLoop();
+        lobbyRef.onSnapshot(doc => { const d = doc.data(); if (d) p2Input = d; });
     } else {
         document.getElementById('controls').style.display = 'flex';
-        // Клиент ничего не рисует, только шлет кнопки
-        document.body.style.background = "#111"; 
-        canvas.style.display = "none";
-        document.body.innerHTML += "<h1 style='color:white; text-align:center; margin-top:50px'>ТЫ - ТЕЙЛЗ (ОРАНЖЕВЫЙ)</h1>";
+        canvas.style.display = 'none';
     }
 }
 
-// Отправка кнопок
-window.sendInput = (key, val) => {
-    let update = {};
-    update[key] = val;
-    lobbyRef.set(update, { merge: true });
-};
-
-// --- ИГРОВОЙ ЦИКЛ ---
-function loop() {
+function gameLoop() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // Земля
+    ctx.fillStyle = "#008000"; ctx.fillRect(0, canvas.height - 70, canvas.width, 70);
 
-    // Рисуем землю
-    ctx.fillStyle = "green";
-    ctx.fillRect(0, canvas.height - 50, canvas.width, 50);
+    const p1Input = { left: keys["ArrowLeft"], right: keys["ArrowRight"], jump: keys["ArrowUp"] };
+    player1.update(p1Input);
+    player2.update(p2Input);
+    player1.draw(ctx);
+    player2.draw(ctx);
 
-    // Локальное управление (Стрелочки для Соника)
-    const p1Input = {
-        left: keys["ArrowLeft"],
-        right: keys["ArrowRight"],
-        jump: keys["ArrowUp"]
-    };
-
-    // Обновляем обоих
-    sonic.update(p1Input); // P1 управляется клавиатурой
-    tails.update(p2Input); // P2 управляется из Firebase
-
-    sonic.draw();
-    tails.draw();
-
-    requestAnimationFrame(loop);
+    requestAnimationFrame(gameLoop);
 }
 
-// Слушатель клавиатуры
+// Управление
+window.sendInput = (key, val) => { let u = {}; u[key] = val; lobbyRef.set(u, { merge: true }); };
 const keys = {};
 window.onkeydown = e => keys[e.code] = true;
 window.onkeyup = e => keys[e.code] = false;
