@@ -3,30 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Neural Sonic Arena</title>
-    
-    <!-- Telegram SDK -->
+    <title>Neural Sonic</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <!-- Игровой движок Phaser 3 -->
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
-    <!-- Твой ИИ-движок -->
-    <script src="engine.js"></script>
-
     <style>
-        body { margin: 0; background: #050505; overflow: hidden; touch-action: none; font-family: monospace; }
-        canvas { display: block; }
-        
-        /* UI Оверлей */
+        body { margin: 0; background: #000; overflow: hidden; touch-action: none; font-family: monospace; }
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
-        .hud-text { position: absolute; color: #00f0ff; font-weight: bold; text-shadow: 0 0 5px #00f0ff; }
-        #status { top: 10px; left: 10px; font-size: 12px; }
-        
-        /* Мобильное управление */
-        .controls { position: absolute; bottom: 20px; width: 100%; display: flex; justify-content: space-between; px: 20px; pointer-events: auto; }
-        .btn { width: 70px; height: 70px; background: rgba(255, 255, 255, 0.1); border: 2px solid rgba(0, 240, 255, 0.5); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30px; color: white; user-select: none; }
-        .btn:active { background: rgba(0, 240, 255, 0.3); }
-        .dpad-area { display: flex; gap: 10px; margin-left: 20px; }
-        .action-area { margin-right: 20px; }
+        .hud { position: absolute; top: 10px; left: 10px; color: #00f0ff; font-weight: bold; text-shadow: 0 0 5px #00f0ff; font-size: 12px; }
+        .controls { position: absolute; bottom: 30px; width: 100%; display: flex; justify-content: space-between; px: 20px; pointer-events: auto; }
+        .btn { width: 80px; height: 80px; background: rgba(255, 255, 255, 0.1); border: 2px solid rgba(0, 240, 255, 0.5); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30px; color: white; user-select: none; margin: 0 10px; }
+        .btn:active { background: rgba(0, 240, 255, 0.3); transform: scale(0.95); }
     </style>
 </head>
 <body>
@@ -34,159 +20,155 @@
     <div id="game-container"></div>
 
     <div id="ui-layer">
-        <div id="status" class="hud-text">NEURAL ENGINE v5.0 ACTIVATED</div>
-        
-        <!-- Кнопки для телефона -->
+        <div id="status" class="hud">SYSTEM: ONLINE</div>
         <div class="controls">
-            <div class="dpad-area">
+            <div style="display:flex;">
                 <div id="btn-left" class="btn">◀</div>
                 <div id="btn-right" class="btn">▶</div>
             </div>
-            <div class="action-area">
-                <div id="btn-jump" class="btn" style="border-color: #ff003c;">🚀</div>
-            </div>
+            <div id="btn-jump" class="btn" style="border-color:#ff003c; margin-right: 20px;">🚀</div>
         </div>
     </div>
 
     <script>
-        // Инициализация Telegram
-        if (window.Telegram && window.Telegram.WebApp) {
-            window.Telegram.WebApp.ready();
-            window.Telegram.WebApp.expand();
+        // --- ТВОЙ ДВИЖОК (ВСТРОЕН ПРЯМО СЮДА) ---
+        class NeuralSonicEngine {
+            constructor(scene) { this.scene = scene; }
+
+            generateTextures() {
+                // 1. Рисуем Соника (Синий круг)
+                const graphics = this.scene.make.graphics({ x: 0, y: 0, add: false });
+                graphics.fillStyle(0x0055FF, 1);
+                graphics.fillCircle(32, 32, 30); // Тело
+                graphics.fillStyle(0xFFDAB9, 1); // Мордочка
+                graphics.fillCircle(42, 32, 10);
+                graphics.generateTexture('sonic_tex', 64, 64);
+
+                // 2. Рисуем Врага (Красный дрон)
+                graphics.clear();
+                graphics.fillStyle(0x333333, 1);
+                graphics.fillCircle(32, 32, 25);
+                graphics.fillStyle(0xFF0000, 1); // Глаз
+                graphics.fillRect(20, 28, 24, 8);
+                graphics.generateTexture('enemy_tex', 64, 64);
+
+                // 3. Рисуем Землю (Трава)
+                graphics.clear();
+                graphics.fillStyle(0x00aa00, 1); // Зеленый верх
+                graphics.fillRect(0, 0, 64, 20);
+                graphics.fillStyle(0x654321, 1); // Коричневый низ
+                graphics.fillRect(0, 20, 64, 44);
+                graphics.generateTexture('ground_tex', 64, 64);
+            }
         }
 
-        // КОНФИГУРАЦИЯ PHASER
+        // --- ИГРОВАЯ ЛОГИКА ---
         const config = {
             type: Phaser.AUTO,
             width: window.innerWidth,
             height: window.innerHeight,
-            backgroundColor: '#050505',
+            backgroundColor: '#1a1a2e', // Темно-синий (чтобы видеть, что игра загрузилась)
             parent: 'game-container',
             physics: {
                 default: 'arcade',
-                arcade: {
-                    gravity: { y: 1000 }, // Гравитация как в Сонике
-                    debug: false
-                }
+                arcade: { gravity: { y: 1500 }, debug: false }
             },
-            scene: {
-                preload: preload,
-                create: create,
-                update: update
-            }
+            scene: { create: create, update: update }
         };
 
         const game = new Phaser.Game(config);
         
-        let player;
-        let hunter;
-        let platforms;
-        let cursors;
-        let neuralEngine;
-        let jumpButtonDown = false;
-        let leftButtonDown = false;
-        let rightButtonDown = false;
-
-        function preload() {
-            // Здесь мы инициализируем твой класс из engine.js
-            // Твой класс сам создаст текстуры, загружать картинки не нужно!
-        }
+        let player, enemy, cursors;
+        let leftDown = false, rightDown = false, jumpDown = false;
 
         function create() {
-            // 1. Запуск твоего движка
-            neuralEngine = new NeuralSonicEngine(this);
-            neuralEngine.generateTextures(); // Генерируем Соника и врага
+            try {
+                // Запуск движка
+                const engine = new NeuralSonicEngine(this);
+                engine.generateTextures();
 
-            // 2. Создание мира
-            platforms = this.physics.add.staticGroup();
-            
-            // Создаем пол из тайлов (tile_v4)
-            for (let i = 0; i < window.innerWidth; i += 64) {
-                platforms.create(i + 32, window.innerHeight - 32, 'tile_v4').refreshBody();
+                // Создание уровня (Пол)
+                const platforms = this.physics.add.staticGroup();
+                // Пол на всю ширину + запас
+                for (let x = 0; x < window.innerWidth * 2; x += 64) {
+                    platforms.create(x + 32, window.innerHeight - 32, 'ground_tex');
+                }
+                // Платформы
+                platforms.create(400, window.innerHeight - 200, 'ground_tex');
+                platforms.create(700, window.innerHeight - 350, 'ground_tex');
+
+                // Игрок
+                player = this.physics.add.sprite(100, 200, 'sonic_tex');
+                player.setBounce(0.1);
+                player.setCollideWorldBounds(true);
+                this.physics.add.collider(player, platforms);
+
+                // Враг
+                enemy = this.physics.add.sprite(600, 100, 'enemy_tex');
+                enemy.body.allowGravity = false; // Летает
+                enemy.setCollideWorldBounds(true);
+                this.physics.add.overlap(player, enemy, () => {
+                    this.cameras.main.shake(100, 0.01); // Эффект удара
+                });
+
+                // Камера
+                this.cameras.main.startFollow(player);
+                this.cameras.main.setBounds(0, 0, window.innerWidth * 2, window.innerHeight);
+
+                // Управление
+                setupControls();
+                cursors = this.input.keyboard.createCursorKeys();
+                
+                document.getElementById('status').innerText = "SYSTEM: GAME STARTED";
+            } catch (e) {
+                document.getElementById('status').innerText = "ERROR: " + e.message;
+                document.getElementById('status').style.color = "red";
             }
-            // Платформы в воздухе
-            platforms.create(300, window.innerHeight - 200, 'tile_v4');
-            platforms.create(600, window.innerHeight - 350, 'tile_v4');
-
-            // 3. Создание Игрока (Соник)
-            player = this.physics.add.sprite(100, 300, 'sonic_v4');
-            player.setBounce(0.2);
-            player.setCollideWorldBounds(true);
-
-            // 4. Создание Врага (Охотник)
-            hunter = this.physics.add.sprite(window.innerWidth - 100, 100, 'hunter_bot');
-            hunter.setCollideWorldBounds(true);
-            hunter.setBounce(0.5);
-            hunter.body.allowGravity = false; // Охотник летает (дрон)
-
-            // 5. Физика
-            this.physics.add.collider(player, platforms);
-            this.physics.add.collider(hunter, platforms);
-            
-            // Столкновение игрока и врага
-            this.physics.add.overlap(player, hunter, hitHunter, null, this);
-
-            // 6. Камера
-            this.cameras.main.startFollow(player);
-            this.cameras.main.setBounds(0, 0, window.innerWidth * 2, window.innerHeight); // Мир шире экрана
-
-            // 7. Управление (Клавиатура)
-            cursors = this.input.keyboard.createCursorKeys();
-
-            // 8. Управление (Тач - Телефон)
-            setupTouchControls();
         }
 
         function update() {
-            if (!player || !neuralEngine) return;
+            if (!player) return;
 
-            // --- ЛОГИКА ИГРОКА ---
-            if (cursors.left.isDown || leftButtonDown) {
-                player.setVelocityX(-300);
-                player.setFlipX(true); // Разворот
-            } else if (cursors.right.isDown || rightButtonDown) {
-                player.setVelocityX(300);
-                player.setFlipX(false);
+            // Движение игрока
+            if (leftDown || cursors.left.isDown) {
+                player.setVelocityX(-400);
+            } else if (rightDown || cursors.right.isDown) {
+                player.setVelocityX(400);
             } else {
                 player.setVelocityX(0);
             }
 
-            if ((cursors.up.isDown || jumpButtonDown) && player.body.touching.down) {
-                player.setVelocityY(-650); // Сила прыжка
+            // Прыжок (только если на земле)
+            if ((jumpDown || cursors.up.isDown) && player.body.touching.down) {
+                player.setVelocityY(-800);
             }
 
-            // Анализ скорости через твой движок
-            const speedStatus = neuralEngine.getVelocityData(player.body.velocity.x);
-            document.getElementById('status').innerText = `AI STATUS: ${speedStatus}`;
-
-            // --- ЛОГИКА ВРАГА (Твой ИИ) ---
-            // Вызываем твой метод автономного ИИ
-            neuralEngine.processHunterAI(hunter, player);
+            // Простой ИИ Врага (Преследование)
+            if (enemy) {
+                this.physics.moveToObject(enemy, player, 150);
+            }
         }
 
-        function hitHunter(player, hunter) {
-            // Эффект удара
-            this.cameras.main.shake(200, 0.01);
-            player.setVelocityY(-300);
-            player.setVelocityX(player.x < hunter.x ? -500 : 500);
-            
-            // Можно добавить логику потери колец
+        function setupControls() {
+            const btnL = document.getElementById('btn-left');
+            const btnR = document.getElementById('btn-right');
+            const btnJ = document.getElementById('btn-jump');
+
+            const set = (el, val) => {
+                el.addEventListener('touchstart', (e) => { e.preventDefault(); val(true); });
+                el.addEventListener('touchend', (e) => { e.preventDefault(); val(false); });
+                el.addEventListener('mousedown', (e) => { val(true); });
+                el.addEventListener('mouseup', (e) => { val(false); });
+            };
+
+            set(btnL, v => leftDown = v);
+            set(btnR, v => rightDown = v);
+            set(btnJ, v => jumpDown = v);
         }
 
-        // Настройка экранных кнопок
-        function setupTouchControls() {
-            const btnLeft = document.getElementById('btn-left');
-            const btnRight = document.getElementById('btn-right');
-            const btnJump = document.getElementById('btn-jump');
-
-            btnLeft.addEventListener('touchstart', (e) => { e.preventDefault(); leftButtonDown = true; });
-            btnLeft.addEventListener('touchend', (e) => { e.preventDefault(); leftButtonDown = false; });
-
-            btnRight.addEventListener('touchstart', (e) => { e.preventDefault(); rightButtonDown = true; });
-            btnRight.addEventListener('touchend', (e) => { e.preventDefault(); rightButtonDown = false; });
-
-            btnJump.addEventListener('touchstart', (e) => { e.preventDefault(); jumpButtonDown = true; });
-            btnJump.addEventListener('touchend', (e) => { e.preventDefault(); jumpButtonDown = false; });
+        if (window.Telegram && window.Telegram.WebApp) {
+            window.Telegram.WebApp.ready();
+            window.Telegram.WebApp.expand();
         }
     </script>
 </body>
