@@ -3,168 +3,135 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Neural Sonic</title>
+    <title>Sonic Web Remake</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
     <style>
-        body { margin: 0; background: #000; overflow: hidden; touch-action: none; font-family: monospace; }
-        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
-        .hud { position: absolute; top: 10px; left: 10px; color: #00f0ff; font-weight: bold; text-shadow: 0 0 5px #00f0ff; font-size: 12px; }
-        .controls { position: absolute; bottom: 30px; width: 100%; display: flex; justify-content: space-between; px: 20px; pointer-events: auto; }
-        .btn { width: 80px; height: 80px; background: rgba(255, 255, 255, 0.1); border: 2px solid rgba(0, 240, 255, 0.5); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30px; color: white; user-select: none; margin: 0 10px; }
-        .btn:active { background: rgba(0, 240, 255, 0.3); transform: scale(0.95); }
+        body { margin: 0; background: #200020; overflow: hidden; font-family: monospace; }
+        #ui { position: absolute; top: 10px; left: 10px; color: gold; font-weight: bold; text-shadow: 2px 2px 0 #000; z-index: 10; font-size: 20px; }
+        .controls { position: absolute; bottom: 40px; width: 100%; display: flex; justify-content: space-between; px: 20px; pointer-events: auto; }
+        .btn { width: 80px; height: 80px; background: rgba(0,0,0,0.3); border: 2px solid white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 40px; color: white; user-select: none; backdrop-filter: blur(5px); }
+        .btn:active { background: rgba(0, 255, 0, 0.5); transform: scale(0.9); }
     </style>
 </head>
 <body>
 
+    <div id="ui">SCORE: 0 <br> RINGS: 0</div>
     <div id="game-container"></div>
 
-    <div id="ui-layer">
-        <div id="status" class="hud">SYSTEM: ONLINE</div>
-        <div class="controls">
-            <div style="display:flex;">
-                <div id="btn-left" class="btn">◀</div>
-                <div id="btn-right" class="btn">▶</div>
-            </div>
-            <div id="btn-jump" class="btn" style="border-color:#ff003c; margin-right: 20px;">🚀</div>
+    <div class="controls">
+        <div style="display:flex; gap:15px; margin-left: 20px;">
+            <div id="btn-left" class="btn">⬅️</div>
+            <div id="btn-right" class="btn">➡️</div>
         </div>
+        <div id="btn-jump" class="btn" style="border-color:#ff003c; margin-right: 20px;">🅰️</div>
     </div>
 
     <script>
-        // --- ТВОЙ ДВИЖОК (ВСТРОЕН ПРЯМО СЮДА) ---
-        class NeuralSonicEngine {
-            constructor(scene) { this.scene = scene; }
+        // СПРАЙТ СОНИКА (Вшит прямо в код, чтобы не качать файлы)
+        const SONIC_SPRITE_URL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAMAAABEpIrGAAAADFBMVEUAAAAAAAD///8A/wD/AADI2Z/2AAAAAXRSTlMAQObYZgAAAF1JREFUeNNtkmEKADEIA837X3nhFwyl2A/FhnmR10lV86O52ZG52d6A+JmB+JmB+JmB+JmB+JmB+JmB+JmB+JmB+JmB+JmB+JmB+JmB+JmB+JmB+JmB+JmB+JmB+J0Bf48K8X8M6noAAAAASUVORK5CYII=';
+        
+        // СПРАЙТ ЗЕМЛИ (Green Hill Zone)
+        const GROUND_SPRITE_URL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAMAAABEpIrGAAAABlBMVEUAAAD///+l2Z/dAAAAAnRSTlMA/1uRIrUAAAAWJREFUeNpjYBgFo2AUjIJRMApGwSgAAyYAAyAAA1l01QAAAABJRU5ErkJggg==';
 
-            generateTextures() {
-                // 1. Рисуем Соника (Синий круг)
-                const graphics = this.scene.make.graphics({ x: 0, y: 0, add: false });
-                graphics.fillStyle(0x0055FF, 1);
-                graphics.fillCircle(32, 32, 30); // Тело
-                graphics.fillStyle(0xFFDAB9, 1); // Мордочка
-                graphics.fillCircle(42, 32, 10);
-                graphics.generateTexture('sonic_tex', 64, 64);
+        class MainScene extends Phaser.Scene {
+            preload() {
+                // Загружаем картинки из Base64 строк выше
+                this.textures.addBase64('sonic', SONIC_SPRITE_URL);
+                this.textures.addBase64('ground', GROUND_SPRITE_URL);
+            }
 
-                // 2. Рисуем Врага (Красный дрон)
-                graphics.clear();
-                graphics.fillStyle(0x333333, 1);
-                graphics.fillCircle(32, 32, 25);
-                graphics.fillStyle(0xFF0000, 1); // Глаз
-                graphics.fillRect(20, 28, 24, 8);
-                graphics.generateTexture('enemy_tex', 64, 64);
+            create() {
+                // Фон (Небо)
+                this.cameras.main.setBackgroundColor('#00a2ff');
 
-                // 3. Рисуем Землю (Трава)
-                graphics.clear();
-                graphics.fillStyle(0x00aa00, 1); // Зеленый верх
-                graphics.fillRect(0, 0, 64, 20);
-                graphics.fillStyle(0x654321, 1); // Коричневый низ
-                graphics.fillRect(0, 20, 64, 44);
-                graphics.generateTexture('ground_tex', 64, 64);
+                // Создаем пол
+                this.platforms = this.physics.add.staticGroup();
+                const groundY = this.scale.height - 32;
+                
+                // Генерируем длинный уровень
+                for (let x = 0; x < 2000; x += 32) {
+                    let tile = this.platforms.create(x + 16, groundY, 'ground').setScale(1).refreshBody();
+                    // Красим пол в коричнево-зеленый (имитация Green Hill)
+                    tile.setTint(0x8B4513); 
+                }
+
+                // Платформы в воздухе
+                this.platforms.create(400, groundY - 100, 'ground').setScale(3, 1).refreshBody().setTint(0x00ff00);
+                this.platforms.create(600, groundY - 200, 'ground').setScale(3, 1).refreshBody().setTint(0x00ff00);
+
+                // Игрок (Соник)
+                this.player = this.physics.add.sprite(100, 200, 'sonic');
+                this.player.setBounce(0.1);
+                this.player.setCollideWorldBounds(false); // Пусть бежит бесконечно
+                this.physics.add.collider(this.player, this.platforms);
+
+                // Камера следит за игроком
+                this.cameras.main.startFollow(this.player);
+                this.cameras.main.setBounds(0, 0, 2000, this.scale.height);
+
+                // Управление
+                this.cursors = this.input.keyboard.createCursorKeys();
+                this.setupTouch();
+            }
+
+            update() {
+                const speed = 300;
+                
+                // Движение
+                if (this.cursors.left.isDown || this.leftDown) {
+                    this.player.setVelocityX(-speed);
+                    this.player.setFlipX(true);
+                } else if (this.cursors.right.isDown || this.rightDown) {
+                    this.player.setVelocityX(speed);
+                    this.player.setFlipX(false);
+                } else {
+                    this.player.setVelocityX(0);
+                }
+
+                // Прыжок
+                if ((this.cursors.up.isDown || this.jumpDown) && this.player.body.touching.down) {
+                    this.player.setVelocityY(-600);
+                }
+
+                // Если упал в пропасть
+                if (this.player.y > this.scale.height) {
+                    this.scene.restart();
+                }
+            }
+
+            setupTouch() {
+                const btnL = document.getElementById('btn-left');
+                const btnR = document.getElementById('btn-right');
+                const btnJ = document.getElementById('btn-jump');
+
+                const bind = (el, prop) => {
+                    el.addEventListener('touchstart', (e) => { e.preventDefault(); this[prop] = true; });
+                    el.addEventListener('touchend', (e) => { e.preventDefault(); this[prop] = false; });
+                    el.addEventListener('mousedown', () => this[prop] = true);
+                    el.addEventListener('mouseup', () => this[prop] = false);
+                };
+
+                bind(btnL, 'leftDown');
+                bind(btnR, 'rightDown');
+                bind(btnJ, 'jumpDown');
             }
         }
 
-        // --- ИГРОВАЯ ЛОГИКА ---
         const config = {
             type: Phaser.AUTO,
             width: window.innerWidth,
             height: window.innerHeight,
-            backgroundColor: '#1a1a2e', // Темно-синий (чтобы видеть, что игра загрузилась)
             parent: 'game-container',
+            pixelArt: true, // ВАЖНО: Делает картинку четкой ("пиксельной")
             physics: {
                 default: 'arcade',
-                arcade: { gravity: { y: 1500 }, debug: false }
+                arcade: { gravity: { y: 1200 }, debug: false }
             },
-            scene: { create: create, update: update }
+            scene: MainScene
         };
 
         const game = new Phaser.Game(config);
-        
-        let player, enemy, cursors;
-        let leftDown = false, rightDown = false, jumpDown = false;
-
-        function create() {
-            try {
-                // Запуск движка
-                const engine = new NeuralSonicEngine(this);
-                engine.generateTextures();
-
-                // Создание уровня (Пол)
-                const platforms = this.physics.add.staticGroup();
-                // Пол на всю ширину + запас
-                for (let x = 0; x < window.innerWidth * 2; x += 64) {
-                    platforms.create(x + 32, window.innerHeight - 32, 'ground_tex');
-                }
-                // Платформы
-                platforms.create(400, window.innerHeight - 200, 'ground_tex');
-                platforms.create(700, window.innerHeight - 350, 'ground_tex');
-
-                // Игрок
-                player = this.physics.add.sprite(100, 200, 'sonic_tex');
-                player.setBounce(0.1);
-                player.setCollideWorldBounds(true);
-                this.physics.add.collider(player, platforms);
-
-                // Враг
-                enemy = this.physics.add.sprite(600, 100, 'enemy_tex');
-                enemy.body.allowGravity = false; // Летает
-                enemy.setCollideWorldBounds(true);
-                this.physics.add.overlap(player, enemy, () => {
-                    this.cameras.main.shake(100, 0.01); // Эффект удара
-                });
-
-                // Камера
-                this.cameras.main.startFollow(player);
-                this.cameras.main.setBounds(0, 0, window.innerWidth * 2, window.innerHeight);
-
-                // Управление
-                setupControls();
-                cursors = this.input.keyboard.createCursorKeys();
-                
-                document.getElementById('status').innerText = "SYSTEM: GAME STARTED";
-            } catch (e) {
-                document.getElementById('status').innerText = "ERROR: " + e.message;
-                document.getElementById('status').style.color = "red";
-            }
-        }
-
-        function update() {
-            if (!player) return;
-
-            // Движение игрока
-            if (leftDown || cursors.left.isDown) {
-                player.setVelocityX(-400);
-            } else if (rightDown || cursors.right.isDown) {
-                player.setVelocityX(400);
-            } else {
-                player.setVelocityX(0);
-            }
-
-            // Прыжок (только если на земле)
-            if ((jumpDown || cursors.up.isDown) && player.body.touching.down) {
-                player.setVelocityY(-800);
-            }
-
-            // Простой ИИ Врага (Преследование)
-            if (enemy) {
-                this.physics.moveToObject(enemy, player, 150);
-            }
-        }
-
-        function setupControls() {
-            const btnL = document.getElementById('btn-left');
-            const btnR = document.getElementById('btn-right');
-            const btnJ = document.getElementById('btn-jump');
-
-            const set = (el, val) => {
-                el.addEventListener('touchstart', (e) => { e.preventDefault(); val(true); });
-                el.addEventListener('touchend', (e) => { e.preventDefault(); val(false); });
-                el.addEventListener('mousedown', (e) => { val(true); });
-                el.addEventListener('mouseup', (e) => { val(false); });
-            };
-
-            set(btnL, v => leftDown = v);
-            set(btnR, v => rightDown = v);
-            set(btnJ, v => jumpDown = v);
-        }
 
         if (window.Telegram && window.Telegram.WebApp) {
             window.Telegram.WebApp.ready();
