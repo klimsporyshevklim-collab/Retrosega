@@ -47,8 +47,32 @@ function preload() {
 async function create() {
     console.log('Initializing multiplayer Battletoads game...');
 
-    // Initialize Socket.io connection
-    socket = io();
+    // Check if Socket.io is available
+    if (typeof io === 'undefined') {
+        console.error('Socket.io client not loaded! Make sure /socket.io/socket.io.js is accessible');
+        if (window.updateConnectionStatus) {
+            window.updateConnectionStatus(false, 0);
+        }
+        return;
+    }
+
+    // Initialize Socket.io connection with dynamic server URL
+    const isProduction = window.location.protocol === 'https:';
+    const serverUrl = isProduction
+        ? `${window.location.protocol}//${window.location.host}`
+        : 'http://localhost:3000';
+
+    console.log('Connecting to server:', serverUrl);
+    socket = io(serverUrl, {
+        transports: ['websocket', 'polling'], // Prefer WebSocket, fallback to polling
+        upgrade: true,
+        rememberUpgrade: true,
+        timeout: 20000,
+        forceNew: false,
+        reconnection: true,
+        reconnectionAttempts: 5,
+        reconnectionDelay: 1000
+    });
 
     // Initialize Battletoads physics
     physics = new BattletoadsPhysics();
@@ -118,6 +142,31 @@ function setupSocketHandlers() {
         });
     });
 
+    socket.on('connect_error', (error) => {
+        console.error('Socket connection error:', error);
+        if (window.updateConnectionStatus) {
+            window.updateConnectionStatus(false, 0);
+        }
+    });
+
+    socket.on('disconnect', (reason) => {
+        console.log('Disconnected from server:', reason);
+        if (window.updateConnectionStatus) {
+            window.updateConnectionStatus(false, 0);
+        }
+    });
+
+    socket.on('reconnect', (attemptNumber) => {
+        console.log('Reconnected to server after', attemptNumber, 'attempts');
+        if (window.updateConnectionStatus) {
+            window.updateConnectionStatus(true, remotePlayers.size + 1);
+        }
+    });
+
+    socket.on('reconnect_error', (error) => {
+        console.error('Reconnection failed:', error);
+    });
+
     socket.on('currentPlayers', (players) => {
         console.log('Received current players:', players);
         players.forEach(playerData => {
@@ -151,13 +200,6 @@ function setupSocketHandlers() {
         // Update player count
         if (window.updateConnectionStatus) {
             window.updateConnectionStatus(true, remotePlayers.size + 1);
-        }
-    });
-
-    socket.on('disconnect', () => {
-        console.log('Disconnected from server');
-        if (window.updateConnectionStatus) {
-            window.updateConnectionStatus(false, 0);
         }
     });
 }
