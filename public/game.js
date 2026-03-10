@@ -5,7 +5,7 @@ class GameScene extends Phaser.Scene {
         super({ key: 'GameScene' });
         this.gameState = 'MENU'; // 'MENU', 'SOLO', 'MULTIPLAYER'
         this.socket = null;
-        this.physicsEngine = new BattletoadsPhysics();
+        this.gameLogic = new GameLogic();
         this.player = null;
         this.playerSprite = null;
         this.cursors = null;
@@ -15,11 +15,11 @@ class GameScene extends Phaser.Scene {
     }
 
     preload() {
-        // Load assets
+        // Load assets - placeholder for now
         this.load.image('rash', '/assets/rash.png');
     }
 
-    create() {
+    async create() {
         // Initialize input
         this.cursors = this.input.keyboard.createCursorKeys();
         this.input.keyboard.on('keydown-ONE', () => {
@@ -51,7 +51,8 @@ class GameScene extends Phaser.Scene {
                 this.updateUI();
             });
             this.socket.on('playerUpdate', (data) => {
-                this.updateRemotePlayer(data);
+                this.gameLogic.updateRemotePlayer(data);
+                this.updateRemotePlayerSprite(data);
             });
         } catch (error) {
             console.warn('Socket.io initialization failed, falling back to SOLO mode:', error);
@@ -61,8 +62,8 @@ class GameScene extends Phaser.Scene {
     }
 
     startGame() {
-        // Initialize player
-        this.player = this.physicsEngine.initPlayer('local', { xPos: 400, zPos: 200 });
+        // Initialize player through GameLogic
+        this.player = this.gameLogic.addPlayer('local', { xPos: 400, zPos: 200 });
         this.playerSprite = this.add.sprite(this.player.xPos, 400 - this.player.zPos, 'rash');
         this.playerSprite.setScale(0.5);
     }
@@ -81,8 +82,8 @@ class GameScene extends Phaser.Scene {
             jump: this.cursors.space.isDown
         };
 
-        // Update physics
-        this.physicsEngine.updateObject(this.player, input);
+        // Update player through GameLogic
+        this.gameLogic.updatePlayer('local', input);
 
         // Update sprite position
         this.playerSprite.x = this.player.xPos;
@@ -90,13 +91,8 @@ class GameScene extends Phaser.Scene {
 
         // If multiplayer, emit update
         if (this.gameState === 'MULTIPLAYER' && this.socket) {
-            this.socket.emit('playerUpdate', {
-                id: 'local',
-                xPos: this.player.xPos,
-                zPos: this.player.zPos,
-                xSpeed: this.player.xSpeed,
-                zSpeed: this.player.zSpeed
-            });
+            const state = this.gameLogic.getPlayerState('local');
+            this.socket.emit('playerUpdate', state);
         }
     }
 
@@ -105,7 +101,7 @@ class GameScene extends Phaser.Scene {
         document.getElementById('player-count').textContent = this.playerCount;
     }
 
-    updateRemotePlayer(data) {
+    updateRemotePlayerSprite(data) {
         if (data.id === 'local') return; // Ignore own updates
         let remoteSprite = this.remotePlayers.get(data.id);
         if (!remoteSprite) {
