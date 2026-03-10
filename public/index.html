@@ -3,40 +3,60 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Multiplayer Battletoads - Retrosega</title>
+    <title>Retrosega - Battletoads Multiplayer</title>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
     <style>
-        body { margin: 0; padding: 0; background: #000; font-family: 'Courier New', monospace; color: #fff; overflow: hidden; }
-        #game-container { width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; }
-        #ui-overlay { position: absolute; top: 10px; left: 10px; background: rgba(0, 0, 0, 0.7); padding: 10px; border-radius: 5px; font-size: 14px; z-index: 1000; pointer-events: none; }
+        body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            font-family: Arial, sans-serif;
+            color: white;
+        }
+        #game-container {
+            position: relative;
+            width: 800px;
+            height: 600px;
+            margin: 0 auto;
+        }
+        #menu-ui {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 5px;
+            z-index: 1000;
+        }
+        #menu-ui div {
+            margin: 5px 0;
+        }
+        #instructions {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 5px;
+            z-index: 1000;
+        }
     </style>
 </head>
 <body>
-    <div id="game-container"></div>
-
-    <div id="ui-overlay">
-        <div id="connection-status">Connecting...</div>
-        <div id="player-count">Players: 0</div>
-        <div>Controls: Arrow Keys to move, Up/Space to jump</div>
+    <div id="game-container">
+        <div id="menu-ui">
+            <div>Connection Status: <span id="connection-status">Disconnected</span></div>
+            <div>Player Count: <span id="player-count">0</span></div>
+        </div>
+        <div id="instructions">
+            Press 1 for SOLO mode<br>
+            Press 2 for MULTIPLAYER mode
+        </div>
     </div>
-
-    <!-- Библиотеки -->
-    <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
-    <script src="/socket.io/socket.io.js"></script>
-
-    <!-- Игровые модули -->
     <script src="js/BattletoadsPhysics.js"></script>
-    <script src="js/LevelMapLoader.js"></script>
     <script src="js/GameLogic.js"></script>
+    <script src="js/LevelMapLoader.js"></script>
     <script src="game.js"></script>
-
-    <script>
-        // Глобальный хелпер для обновления интерфейса из game.js
-        window.updateConnectionStatus = (connected, count) => {
-            const status = document.getElementById('connection-status');
-            status.textContent = connected ? 'Connected' : 'Disconnected';
-            status.style.color = connected ? '#00ff00' : '#ff0000';
-            document.getElementById('player-count').textContent = `Players: ${count}`;
-        };
-    </script>
 </body>
 </html>
