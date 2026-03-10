@@ -5,11 +5,18 @@ const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
+
+// Configure Socket.io for production
 const io = socketIo(server, {
     cors: {
         origin: "*",
-        methods: ["GET", "POST"]
-    }
+        methods: ["GET", "POST"],
+        credentials: true
+    },
+    // Allow client to serve socket.io.js
+    serveClient: true,
+    // Path for socket.io client
+    path: '/socket.io'
 });
 
 // Middleware
@@ -92,18 +99,27 @@ app.post('/api/user-data', (req, res) => {
     });
 });
 
-// Health check endpoint
+// Health check endpoint for Render.com
 app.get('/health', (req, res) => {
+    res.status(200).send('OK');
+});
+
+// Detailed health check endpoint
+app.get('/health/detailed', (req, res) => {
     res.json({
         status: 'ok',
         players: players.size,
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        uptime: process.uptime(),
+        memory: process.memoryUsage()
     });
 });
 
 // Start server
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-    console.log(`🚀 Multiplayer Battletoads server running on port ${PORT}`);
-    console.log(`📊 Server health check: http://localhost:${PORT}/health`);
+    const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
+    console.log(`🚀 Multiplayer Battletoads server running on ${protocol}://localhost:${PORT}`);
+    console.log(`📊 Health check: ${protocol}://localhost:${PORT}/health`);
+    console.log(`👥 Connected players: ${players.size}`);
 });
