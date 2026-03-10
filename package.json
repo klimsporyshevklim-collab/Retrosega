@@ -1,32 +1,18 @@
 {
-  "name": "multiplayer-battletoads",
+  "name": "retrosega",
   "version": "1.0.0",
-  "description": "Multiplayer Battletoads game using Phaser 3 and Socket.io",
+  "description": "Battletoads multiplayer game with Phaser and Socket.io",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js"
   },
   "dependencies": {
-    "axios": "^1.6.7",
-    "cors": "^2.8.5",
     "express": "^4.18.2",
-    "mongoose": "^8.1.1",
-    "socket.io": "^4.7.5",
-    "ws": "^8.16.0"
+    "socket.io": "^4.7.2",
+    "cors": "^2.8.5"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
-  },
-  "keywords": [
-    "phaser",
-    "socket.io",
-    "multiplayer",
-    "battletoads",
-    "game"
-  ],
-  "engines": {
-    "node": ">=18.0.0"
-  },
-  "license": "MIT"
+  }
 }
