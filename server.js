@@ -1,16 +1,50 @@
 const express = require('express');
-const app = express();
-const http = require('http').createServer(app);
-const io = require('socket.io')(http);
+const http = require('http');
+const socketIo = require('socket.io');
+const cors = require('cors');
 
+const app = express();
+const server = http.createServer(app);
+const io = socketIo(server, {
+    cors: {
+        origin: "*",
+        methods: ["GET", "POST"]
+    }
+});
+
+const PORT = process.env.PORT || 3001;
+
+// Middleware
+app.use(cors());
 app.use(express.static('public'));
 
+// Health check endpoint
+app.get('/health', (req, res) => {
+    res.status(200).send('OK');
+});
+
+// Socket.io logic
+let playerCount = 0;
+
 io.on('connection', (socket) => {
-    // Рассылаем всем остальным игрокам то, что прислал один игрок
+    playerCount++;
+    console.log(`Player connected: ${socket.id}. Total players: ${playerCount}`);
+    
+    // Send current player count
+    io.emit('playerCount', playerCount);
+    
     socket.on('playerUpdate', (data) => {
-        socket.broadcast.emit('remotePlayerUpdate', { id: socket.id, ...data });
+        // Broadcast to other players
+        socket.broadcast.emit('playerUpdate', data);
+    });
+    
+    socket.on('disconnect', () => {
+        playerCount--;
+        console.log(`Player disconnected: ${socket.id}. Total players: ${playerCount}`);
+        io.emit('playerCount', playerCount);
     });
 });
 
-const PORT = process.env.PORT || 3000;
-http.listen(PORT, '0.0.0.0', () => console.log('Multiplayer Relay Server Live'));
+server.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+});
