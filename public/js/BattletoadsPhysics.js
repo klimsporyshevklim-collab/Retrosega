@@ -1,249 +1,199 @@
 /**
- * Battletoads Physics Engine
- * Implements authentic Battletoads movement mechanics with subpixel precision
+ * BattletoadsPhysics - Core physics engine for Battletoads game logic
+ * Implements the Z-axis physics, movement, and collision response
+ * Based on reverse-engineered ASM from Battletoads (Genesis)
  */
 
 class BattletoadsPhysics {
     constructor() {
-        this.gravity = 0.5; // Gravity acceleration
-        this.maxFallSpeed = 8.0; // Maximum falling speed
-        this.jumpPower = -12.0; // Initial jump velocity (negative = up)
-        this.moveSpeed = 3.0; // Horizontal movement speed
-        this.acceleration = 0.5; // Horizontal acceleration
-        this.deceleration = 0.8; // Horizontal deceleration when no input
-        this.airControl = 0.3; // Air control multiplier
-        this.maxSpeed = 6.0; // Maximum horizontal speed
-
-        // Player states
-        this.STATES = {
-            IDLE: 'idle',
-            WALK: 'walk',
-            JUMP: 'jump',
-            FALL: 'fall'
+        // Physics constants from ASM analysis
+        this.constants = {
+            GRAVITY: 1,              // +1 per frame to Z_speed (line 3770)
+            JUMP_VELOCITY: -240,     // Z_speed = $F0 (negative = upward)
+            SPEED_LIMIT: 128,        // X_speed capped at $80 (128 decimal)
+            WALK_ACCEL: 8,           // Acceleration per frame
+            BOUNCE_DAMPING: 0.5,     // Player bounce reduced by 50%
+            SUBPIXEL_PRECISION: 256, // 8-bit subpixel precision
         };
+
+        // Player state tracking
+        this.players = new Map();
     }
 
     /**
      * Initialize a player object with physics properties
+     * @param {string} playerId - Unique identifier for the player
+     * @param {Object} initialState - Initial player state
      */
-    createPlayer(x = 0, y = 0, z = 0) {
-        return {
-            // Position (subpixel precision)
-            x: x << 8, // Convert to 8.8 fixed point
-            y: y << 8,
-            z: z << 8,
+    initPlayer(playerId, initialState = {}) {
+        const player = {
+            // Position (Battletoads coordinate system)
+            xPos: initialState.xPos || 0,        // X position (horizontal)
+            yPos: initialState.yPos || 0,        // Y position (screen depth)
+            zPos: initialState.zPos || 0,        // Z position (vertical height)
 
-            // Velocity (subpixel precision)
-            vx: 0,
-            vy: 0,
-            vz: 0,
+            // Velocity
+            xSpeed: initialState.xSpeed || 0,    // X velocity
+            ySpeed: initialState.ySpeed || 0,    // Y velocity
+            zSpeed: initialState.zSpeed || 0,    // Z velocity
 
-            // State
-            state: this.STATES.IDLE,
-            onGround: false,
-            facingRight: true,
+            // Subpixel precision (from ASM objects_Z_spd_sub, Objects_Z_sub)
+            xSpeedSub: initialState.xSpeedSub || 0,
+            ySpeedSub: initialState.ySpeedSub || 0,
+            zSpeedSub: initialState.zSpeedSub || 0,
+            xSub: initialState.xSub || 0,
+            ySub: initialState.ySub || 0,
+            zSub: initialState.zSub || 0,
 
-            // Collision box (in pixels)
-            width: 16,
-            height: 24,
+            // Collision state
+            zFloor: initialState.zFloor || 8,    // Distance to floor (0=on ground, 8=in air)
+            isGrounded: initialState.isGrounded || false,
 
-            // Animation
-            frame: 0,
-            frameTimer: 0
+            // Player properties
+            facing: initialState.facing || 1,    // 1=right, -1=left
+            state: initialState.state || 'IDLE', // Player state machine
+            invulnerable: initialState.invulnerable || false,
+
+            // Level context
+            levelId: initialState.levelId || 1,
         };
+
+        this.players.set(playerId, player);
+        return player;
     }
 
     /**
-     * Update player physics
-     * @param {Object} player - Player object
-     * @param {Object} input - Input state {left, right, jump}
-     * @param {Function} collisionCallback - Function to check collisions
+     * Get player by ID
+     * @param {string} playerId - Player identifier
+     * @returns {Object} Player object
      */
-    updateObject(player, input, collisionCallback = null) {
-        const oldX = player.x;
-        const oldY = player.y;
-        const oldZ = player.z;
+    getPlayer(playerId) {
+        return this.players.get(playerId);
+    }
 
-        // Handle horizontal movement
-        this.handleHorizontalMovement(player, input);
-
-        // Handle jumping
-        this.handleJumping(player, input);
-
-        // Apply gravity
+    /**
+     * Update object physics for one frame
+     * Main physics update function called each game tick
+     *
+     * @param {Object} player - Player object to update
+     * @param {Object} input - Input state {left, right, up, down, jump, attack}
+     */
+    updateObject(player, input = {}) {
+        // Apply gravity first (always, unless special conditions)
         this.applyGravity(player);
 
-        // Apply velocity to position
-        player.x += player.vx;
-        player.y += player.vy;
-        player.z += player.vz;
+        // Handle input-based movement
+        this.handleInput(player, input);
 
-        // Check collisions if callback provided
-        if (collisionCallback) {
-            collisionCallback(player, oldX, oldY, oldZ);
-        }
+        // Update position based on velocity
+        this.updatePosition(player);
 
-        // Update state based on movement
-        this.updateState(player);
+        // Apply speed limits
+        this.applySpeedLimits(player);
 
-        // Update animation
-        this.updateAnimation(player);
+        // Update player state based on movement/collision
+        this.updatePlayerState(player);
     }
 
     /**
-     * Handle horizontal movement input
-     */
-    handleHorizontalMovement(player, input) {
-        let targetSpeed = 0;
-
-        if (input.left && !input.right) {
-            targetSpeed = -this.moveSpeed;
-            player.facingRight = false;
-        } else if (input.right && !input.left) {
-            targetSpeed = this.moveSpeed;
-            player.facingRight = true;
-        }
-
-        // Apply acceleration/deceleration
-        if (targetSpeed !== 0) {
-            // Accelerate towards target speed
-            if (player.onGround) {
-                player.vx += (targetSpeed - (player.vx >> 8)) * this.acceleration;
-            } else {
-                // Less control in air
-                player.vx += (targetSpeed - (player.vx >> 8)) * this.airControl;
-            }
-        } else {
-            // Decelerate when no input
-            if (player.onGround) {
-                player.vx = player.vx * this.deceleration;
-            }
-        }
-
-        // Clamp horizontal speed
-        const maxSpeedFixed = this.maxSpeed << 8;
-        if (player.vx > maxSpeedFixed) player.vx = maxSpeedFixed;
-        if (player.vx < -maxSpeedFixed) player.vx = -maxSpeedFixed;
-
-        // Stop completely if very slow
-        if (Math.abs(player.vx) < 32) player.vx = 0; // Less than 0.125 pixels
-    }
-
-    /**
-     * Handle jumping input
-     */
-    handleJumping(player, input) {
-        if (input.jump && player.onGround && player.state !== this.STATES.JUMP) {
-            player.vy = this.jumpPower << 8; // Convert to fixed point
-            player.onGround = false;
-            player.state = this.STATES.JUMP;
-        }
-    }
-
-    /**
-     * Apply gravity to player
+     * Apply gravity to Z velocity
+     * Based on objects_Z_phys? function (lines 3767-3834)
      */
     applyGravity(player) {
-        if (!player.onGround) {
-            player.vy += this.gravity << 8; // Convert gravity to fixed point
+        player.zSpeed += this.constants.GRAVITY;
+    }
 
-            // Clamp falling speed
-            const maxFallSpeedFixed = this.maxFallSpeed << 8;
-            if (player.vy > maxFallSpeedFixed) {
-                player.vy = maxFallSpeedFixed;
-            }
+    /**
+     * Handle player input for movement
+     * @param {Object} player - Player object
+     * @param {Object} input - Input state
+     */
+    handleInput(player, input) {
+        // Horizontal movement
+        if (input.left) {
+            player.xSpeed -= this.constants.WALK_ACCEL;
+            player.facing = -1;
+        }
+        if (input.right) {
+            player.xSpeed += this.constants.WALK_ACCEL;
+            player.facing = 1;
+        }
+
+        // Jump
+        if (input.jump && player.isGrounded) {
+            player.zSpeed = this.constants.JUMP_VELOCITY;
+            player.isGrounded = false;
         }
     }
 
     /**
-     * Update player state based on movement
+     * Update position based on velocity with subpixel precision
+     * @param {Object} player - Player object
      */
-    updateState(player) {
-        const speed = Math.abs(player.vx >> 8); // Convert back to pixels
+    updatePosition(player) {
+        // Update subpixel accumulators
+        player.xSub += player.xSpeed;
+        player.zSub += player.zSpeed;
 
-        if (!player.onGround) {
-            if (player.vy < 0) {
-                player.state = this.STATES.JUMP;
+        // Convert subpixel to pixel movement
+        const xMove = Math.floor(player.xSub / this.constants.SUBPIXEL_PRECISION);
+        const zMove = Math.floor(player.zSub / this.constants.SUBPIXEL_PRECISION);
+
+        // Update positions
+        player.xPos += xMove;
+        player.zPos += zMove;
+
+        // Keep subpixel remainder
+        player.xSub %= this.constants.SUBPIXEL_PRECISION;
+        player.zSub %= this.constants.SUBPIXEL_PRECISION;
+    }
+
+    /**
+     * Apply speed limits to prevent excessive velocity
+     * @param {Object} player - Player object
+     */
+    applySpeedLimits(player) {
+        // X speed limit
+        if (player.xSpeed > this.constants.SPEED_LIMIT) {
+            player.xSpeed = this.constants.SPEED_LIMIT;
+        } else if (player.xSpeed < -this.constants.SPEED_LIMIT) {
+            player.xSpeed = -this.constants.SPEED_LIMIT;
+        }
+
+        // Z speed limit (falling speed)
+        if (player.zSpeed > this.constants.SPEED_LIMIT) {
+            player.zSpeed = this.constants.SPEED_LIMIT;
+        }
+    }
+
+    /**
+     * Update player state based on current conditions
+     * @param {Object} player - Player object
+     */
+    updatePlayerState(player) {
+        // Ground collision (simplified)
+        if (player.zPos <= 0) {
+            player.zPos = 0;
+            player.zSpeed = 0;
+            player.isGrounded = true;
+        } else {
+            player.isGrounded = false;
+        }
+
+        // Update state machine
+        if (player.isGrounded) {
+            if (Math.abs(player.xSpeed) > 0) {
+                player.state = 'WALKING';
             } else {
-                player.state = this.STATES.FALL;
+                player.state = 'IDLE';
             }
         } else {
-            if (speed > 0.1) {
-                player.state = this.STATES.WALK;
-            } else {
-                player.state = this.STATES.IDLE;
-            }
+            player.state = 'JUMPING';
         }
-    }
-
-    /**
-     * Update animation frame
-     */
-    updateAnimation(player) {
-        player.frameTimer++;
-
-        // Animation speed based on state
-        let animSpeed = 8; // Default
-
-        switch (player.state) {
-            case this.STATES.WALK:
-                animSpeed = Math.max(4, 12 - Math.abs(player.vx >> 8));
-                break;
-            case this.STATES.IDLE:
-                animSpeed = 16;
-                break;
-            case this.STATES.JUMP:
-            case this.STATES.FALL:
-                animSpeed = 4;
-                break;
-        }
-
-        if (player.frameTimer >= animSpeed) {
-            player.frame++;
-            player.frameTimer = 0;
-        }
-    }
-
-    /**
-     * Get player position in pixels (convert from fixed point)
-     */
-    getPixelPosition(player) {
-        return {
-            x: player.x >> 8,
-            y: player.y >> 8,
-            z: player.z >> 8
-        };
-    }
-
-    /**
-     * Set player position in pixels (convert to fixed point)
-     */
-    setPixelPosition(player, x, y, z) {
-        player.x = x << 8;
-        player.y = y << 8;
-        player.z = z << 8;
-    }
-
-    /**
-     * Check if player is on ground (simple collision detection)
-     */
-    checkGroundCollision(player, groundY) {
-        const pixelY = player.y >> 8;
-        const pixelHeight = player.height;
-
-        if (pixelY + pixelHeight >= groundY && player.vy > 0) {
-            player.y = (groundY - pixelHeight) << 8;
-            player.vy = 0;
-            player.onGround = true;
-            return true;
-        }
-
-        player.onGround = false;
-        return false;
     }
 }
 
-// Export for use in other files
+// Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = BattletoadsPhysics;
 }
