@@ -12,13 +12,13 @@ const io = socketIo(server, {
     }
 });
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3001; // Render.com compatibility
 
 // Middleware
 app.use(cors());
 app.use(express.static('public'));
 
-// Health check endpoint
+// Health check endpoint for Render.com
 app.get('/health', (req, res) => {
     res.status(200).send('OK');
 });
