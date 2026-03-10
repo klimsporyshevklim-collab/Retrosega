@@ -1,263 +1,223 @@
 /**
- * GameLogic.js - Main game logic integration for Battletoads Phaser port
- *
- * Integrates BattletoadsPhysics and LevelMapLoader to handle:
- * - Physics updates each frame
- * - Floor collision detection and response
- * - Coordinate system mapping between Battletoads and Phaser
- * - Player state management
+ * Game Logic - Coordinate conversion and game state management
+ * Handles conversion between Battletoads coordinate system and Phaser coordinate system
  */
 
 class GameLogic {
     constructor() {
-        // Initialize physics engine
-        this.physics = new BattletoadsPhysics();
+        // Battletoads coordinate system constants
+        this.BTD_SCREEN_WIDTH = 320;
+        this.BTD_SCREEN_HEIGHT = 224;
+        this.BTD_WORLD_SCALE = 256; // Battletoads uses 8.8 fixed point
 
-        // Level map loader (will be set when level loads)
-        this.mapLoader = null;
+        // Phaser coordinate system constants
+        this.PHASER_SCALE = 2; // 2x scale for better visibility
+        this.PHASER_WORLD_WIDTH = this.BTD_SCREEN_WIDTH * this.PHASER_SCALE;
+        this.PHASER_WORLD_HEIGHT = this.BTD_SCREEN_HEIGHT * this.PHASER_SCALE;
 
-        // Coordinate system mapping
-        this.coordinateMapping = {
-            // Battletoads -> Phaser coordinate mapping
-            battletoadsToPhaser: {
-                x: 'x',      // Battletoads X -> Phaser X (horizontal)
-                y: 'z',      // Battletoads Z -> Phaser Y (vertical height)
-                z: 'y'       // Battletoads Y -> Phaser Z (depth/layering)
-            },
-            // Phaser -> Battletoads coordinate mapping
-            phaserToBattletoads: {
-                x: 'x',      // Phaser X -> Battletoads X
-                y: 'z',      // Phaser Y -> Battletoads Z (vertical)
-                z: 'y'       // Phaser Z -> Battletoads Y (depth)
-            }
-        };
+        // Camera and viewport settings
+        this.CAMERA_DEADZONE = 50;
+        this.CAMERA_LERP = 0.1;
 
-        // Game state
-        this.players = new Map();
-        this.currentLevel = 1;
-    }
-
-    /**
-     * Initialize the game logic with a level
-     *
-     * @param {number} levelId - Level identifier
-     * @param {Uint8Array} mapData - Raw map data from ROM
-     */
-    async initLevel(levelId, mapData) {
-        this.currentLevel = levelId;
-        this.mapLoader = new LevelMapLoader(mapData, levelId);
-
-        console.log(`GameLogic: Initialized level ${levelId} with ${mapData.length} bytes of map data`);
-    }
-
-    /**
-     * Create a new player
-     *
-     * @param {string} playerId - Unique player identifier
-     * @param {Object} initialPosition - Initial position {x, y, z} in Phaser coordinates
-     * @returns {Object} Player object
-     */
-    createPlayer(playerId, initialPosition = {x: 0, y: 0, z: 0}) {
-        // Convert Phaser coordinates to Battletoads coordinates
-        const battletoadsPos = this.phaserToBattletoads(initialPosition);
-
-        const player = this.physics.initPlayer(playerId, {
-            xPos: battletoadsPos.x,
-            yPos: battletoadsPos.y,
-            zPos: battletoadsPos.z,
-            levelId: this.currentLevel
-        });
-
-        this.players.set(playerId, player);
-        return player;
-    }
-
-    /**
-     * Main game tick - process one frame of game logic
-     * This is the core function called each Phaser update cycle
-     *
-     * @param {string} playerId - Player identifier
-     * @param {Object} input - Input state {left, right, up, down, jump, attack}
-     * @param {LevelMapLoader} mapLoader - Map loader instance (optional, uses this.mapLoader if not provided)
-     * @returns {Object} Updated player state in Phaser coordinates
-     */
-    processGameTick(playerId, input = {}, mapLoader = null) {
-        const player = this.players.get(playerId);
-        if (!player) {
-            console.error(`GameLogic: Player ${playerId} not found`);
-            return null;
-        }
-
-        // Use provided mapLoader or default to this.mapLoader
-        const activeMapLoader = mapLoader || this.mapLoader;
-        if (!activeMapLoader) {
-            console.error('GameLogic: No map loader available');
-            return this.battletoadsToPhaser(player);
-        }
-
-        // Step 1: Get current floor height at player's position
-        const floorHeight = activeMapLoader.getFloorHeightAt(player.xPos, player.yPos);
-
-        // Step 2: Update physics (gravity, velocity, position)
-        this.physics.updateObject(player, input);
-
-        // Step 3: Resolve floor collisions
-        this.resolveFloorCollision(player, floorHeight);
-
-        // Step 4: Apply bounce physics if needed
-        if (player.shouldBounce) {
-            this.physics.applyBounce(player);
-            player.shouldBounce = false; // Reset flag
-        }
-
-        // Return player state in Phaser coordinates
-        return this.battletoadsToPhaser(player);
-    }
-
-    /**
-     * Resolve floor collision for a player
-     * Based on the collision logic from Battletoads ASM
-     *
-     * @param {Object} player - Player object (Battletoads coordinates)
-     * @param {number} floorHeight - Floor height at current position
-     */
-    resolveFloorCollision(player, floorHeight) {
-        // Check if player is below floor level (collision)
-        const isColliding = player.zPos < floorHeight;
-
-        if (isColliding) {
-            // Calculate penetration depth
-            const penetration = floorHeight - player.zPos;
-
-            // Move player up to floor level
-            player.zPos = floorHeight;
-            player.zFloor = 0; // On ground
-            player.isGrounded = true;
-
-            // Check if this was a falling collision (for bounce)
-            const wasFalling = player.zSpeed > 0;
-            if (wasFalling && penetration < 10) { // Close enough to bounce
-                player.shouldBounce = true;
-            }
-
-            // Stop downward velocity
-            if (player.zSpeed > 0) {
-                player.zSpeed = 0;
-                player.zSpeedSub = 0;
-            }
-        } else {
-            // Player is above floor (in air)
-            player.zFloor = 8; // Air flag
-            player.isGrounded = false;
-        }
-    }
-
-    /**
-     * Convert Phaser coordinates to Battletoads coordinates
-     * Battletoads uses: X=horizontal, Y=depth, Z=vertical height
-     * Phaser typically uses: X=horizontal, Y=vertical, Z=depth
-     *
-     * @param {Object} phaserCoords - {x, y, z} in Phaser coordinate system
-     * @returns {Object} {x, y, z} in Battletoads coordinate system
-     */
-    phaserToBattletoads(phaserCoords) {
-        return {
-            x: phaserCoords.x,                    // Phaser X -> Battletoads X (horizontal)
-            y: phaserCoords.z || 0,              // Phaser Z -> Battletoads Y (depth)
-            z: phaserCoords.y                    // Phaser Y -> Battletoads Z (vertical)
+        // Level bounds
+        this.LEVEL_BOUNDS = {
+            left: 0,
+            right: this.PHASER_WORLD_WIDTH,
+            top: 0,
+            bottom: this.PHASER_WORLD_HEIGHT
         };
     }
 
     /**
      * Convert Battletoads coordinates to Phaser coordinates
-     * Battletoads uses: X=horizontal, Y=depth, Z=vertical height
-     * Phaser typically uses: X=horizontal, Y=vertical, Z=depth
-     *
-     * @param {Object} battletoadsCoords - {x, y, z} in Battletoads coordinate system
-     * @returns {Object} {x, y, z} in Phaser coordinate system
+     * Battletoads: X increases right, Y increases down, Z increases up
+     * Phaser: X increases right, Y increases down
      */
-    battletoadsToPhaser(battletoadsCoords) {
+    battletoadsToPhaser(btdX, btdY, btdZ = 0) {
         return {
-            x: battletoadsCoords.x,              // Battletoads X -> Phaser X (horizontal)
-            y: battletoadsCoords.z,              // Battletoads Z -> Phaser Y (vertical)
-            z: battletoadsCoords.y               // Battletoads Y -> Phaser Z (depth)
+            x: (btdX / this.BTD_WORLD_SCALE) * this.PHASER_SCALE,
+            y: this.PHASER_WORLD_HEIGHT - ((btdY / this.BTD_WORLD_SCALE) * this.PHASER_SCALE),
+            z: (btdZ / this.BTD_WORLD_SCALE) * this.PHASER_SCALE
         };
     }
 
     /**
-     * Get player debug information
-     *
-     * @param {string} playerId - Player identifier
-     * @returns {Object} Debug information with both coordinate systems
+     * Convert Phaser coordinates to Battletoads coordinates
      */
-    getPlayerDebugInfo(playerId) {
-        const player = this.players.get(playerId);
-        if (!player) return null;
-
-        const physicsDebug = this.physics.getDebugInfo(playerId);
-        const phaserCoords = this.battletoadsToPhaser(player);
-
+    phaserToBattletoads(phaserX, phaserY, phaserZ = 0) {
         return {
-            playerId: playerId,
-            battletoadsCoords: {
-                x: player.xPos,
-                y: player.yPos,
-                z: player.zPos
-            },
-            phaserCoords: phaserCoords,
-            physics: physicsDebug,
-            collision: {
-                floorHeight: this.mapLoader ? this.mapLoader.getFloorHeightAt(player.xPos, player.yPos) : 'No map',
-                zFloor: player.zFloor,
-                isGrounded: player.isGrounded,
-                shouldBounce: player.shouldBounce
-            },
-            state: player.state,
-            level: this.currentLevel
+            x: (phaserX / this.PHASER_SCALE) * this.BTD_WORLD_SCALE,
+            y: ((this.PHASER_WORLD_HEIGHT - phaserY) / this.PHASER_SCALE) * this.BTD_WORLD_SCALE,
+            z: (phaserZ / this.PHASER_SCALE) * this.BTD_WORLD_SCALE
         };
     }
 
     /**
-     * Update level map data
-     *
-     * @param {Uint8Array} newMapData - New map data
+     * Convert velocity from Battletoads to Phaser
      */
-    updateMapData(newMapData) {
-        if (this.mapLoader) {
-            // Create new map loader with updated data
-            this.mapLoader = new LevelMapLoader(newMapData, this.currentLevel);
+    velocityBattletoadsToPhaser(btdVx, btdVy, btdVz = 0) {
+        return {
+            vx: (btdVx / this.BTD_WORLD_SCALE) * this.PHASER_SCALE,
+            vy: -((btdVy / this.BTD_WORLD_SCALE) * this.PHASER_SCALE), // Y is inverted
+            vz: (btdVz / this.BTD_WORLD_SCALE) * this.PHASER_SCALE
+        };
+    }
+
+    /**
+     * Convert velocity from Phaser to Battletoads
+     */
+    velocityPhaserToBattletoads(phaserVx, phaserVy, phaserVz = 0) {
+        return {
+            vx: (phaserVx / this.PHASER_SCALE) * this.BTD_WORLD_SCALE,
+            vy: -((phaserVy / this.PHASER_SCALE) * this.BTD_WORLD_SCALE), // Y is inverted
+            vz: (phaserVz / this.PHASER_SCALE) * this.BTD_WORLD_SCALE
+        };
+    }
+
+    /**
+     * Clamp position within level bounds
+     */
+    clampToBounds(x, y) {
+        return {
+            x: Math.max(this.LEVEL_BOUNDS.left, Math.min(this.LEVEL_BOUNDS.right, x)),
+            y: Math.max(this.LEVEL_BOUNDS.top, Math.min(this.LEVEL_BOUNDS.bottom, y))
+        };
+    }
+
+    /**
+     * Check if position is within camera deadzone
+     */
+    isInCameraDeadzone(playerX, playerY, cameraX, cameraY) {
+        const dx = Math.abs(playerX - cameraX);
+        const dy = Math.abs(playerY - cameraY);
+        return dx < this.CAMERA_DEADZONE && dy < this.CAMERA_DEADZONE;
+    }
+
+    /**
+     * Calculate camera target position with lerping
+     */
+    calculateCameraTarget(playerX, playerY, currentCameraX, currentCameraY) {
+        let targetX = currentCameraX;
+        let targetY = currentCameraY;
+
+        // Only move camera if player is outside deadzone
+        if (!this.isInCameraDeadzone(playerX, playerY, currentCameraX, currentCameraY)) {
+            targetX = playerX;
+            targetY = playerY;
+        }
+
+        // Clamp camera to level bounds
+        const halfWidth = this.PHASER_WORLD_WIDTH / 2;
+        const halfHeight = this.PHASER_WORLD_HEIGHT / 2;
+
+        targetX = Math.max(halfWidth, Math.min(this.LEVEL_BOUNDS.right - halfWidth, targetX));
+        targetY = Math.max(halfHeight, Math.min(this.LEVEL_BOUNDS.bottom - halfHeight, targetY));
+
+        // Apply lerping for smooth camera movement
+        const newX = currentCameraX + (targetX - currentCameraX) * this.CAMERA_LERP;
+        const newY = currentCameraY + (targetY - currentCameraY) * this.CAMERA_LERP;
+
+        return { x: newX, y: newY };
+    }
+
+    /**
+     * Calculate distance between two points
+     */
+    distance(x1, y1, x2, y2) {
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    /**
+     * Check collision between two rectangles
+     */
+    checkRectCollision(rect1, rect2) {
+        return !(rect1.x + rect1.width < rect2.x ||
+                 rect2.x + rect2.width < rect1.x ||
+                 rect1.y + rect1.height < rect2.y ||
+                 rect2.y + rect2.height < rect1.y);
+    }
+
+    /**
+     * Get collision rectangle for a player
+     */
+    getPlayerCollisionRect(player) {
+        const pos = this.battletoadsToPhaser(player.x >> 8, player.y >> 8, player.z >> 8);
+        return {
+            x: pos.x - player.width / 2,
+            y: pos.y - player.height,
+            width: player.width,
+            height: player.height
+        };
+    }
+
+    /**
+     * Handle player vs player collision
+     */
+    handlePlayerCollision(player1, player2) {
+        const rect1 = this.getPlayerCollisionRect(player1);
+        const rect2 = this.getPlayerCollisionRect(player2);
+
+        if (this.checkRectCollision(rect1, rect2)) {
+            // Simple separation - move players apart
+            const center1 = { x: rect1.x + rect1.width / 2, y: rect1.y + rect1.height / 2 };
+            const center2 = { x: rect2.x + rect2.width / 2, y: rect2.y + rect2.height / 2 };
+
+            const dx = center2.x - center1.x;
+            const dy = center2.y - center1.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            if (distance > 0) {
+                const separation = 2; // pixels to separate
+                const sepX = (dx / distance) * separation;
+                const sepY = (dy / distance) * separation;
+
+                // Move player1 away from player2
+                const btdSep = this.phaserToBattletoads(sepX, sepY, 0);
+                player1.x -= btdSep.x >> 8; // Convert back to fixed point adjustment
+                player1.y -= btdSep.y >> 8;
+            }
         }
     }
 
     /**
-     * Get collision info at a specific position
-     *
-     * @param {number} x - X coordinate (Phaser)
-     * @param {number} y - Y coordinate (Phaser)
-     * @returns {Object} Collision information
+     * Update game state for all players
      */
-    getCollisionAt(x, y) {
-        if (!this.mapLoader) return null;
+    updateGameState(players, deltaTime) {
+        // Handle player vs player collisions
+        const playerIds = Object.keys(players);
+        for (let i = 0; i < playerIds.length; i++) {
+            for (let j = i + 1; j < playerIds.length; j++) {
+                const player1 = players[playerIds[i]];
+                const player2 = players[playerIds[j]];
+                this.handlePlayerCollision(player1, player2);
+            }
+        }
 
-        // Convert to Battletoads coordinates for collision check
-        const battletoadsPos = this.phaserToBattletoads({x, y, z: 0});
-        return this.mapLoader.getCollisionInfo(battletoadsPos.x, battletoadsPos.y, 0);
+        // Update player animations and states
+        playerIds.forEach(id => {
+            const player = players[id];
+            // Additional game logic can be added here
+        });
     }
 
     /**
-     * Check if a position is valid (has floor collision)
-     *
-     * @param {number} x - X coordinate (Phaser)
-     * @param {number} y - Y coordinate (Phaser)
-     * @returns {boolean} True if position has valid floor
+     * Get game statistics
      */
-    isValidPosition(x, y) {
-        const collision = this.getCollisionAt(x, y);
-        return collision && collision.floorHeight > 0;
+    getGameStats(players) {
+        const playerCount = Object.keys(players).length;
+        const activePlayers = Object.values(players).filter(p => p.state !== 'idle').length;
+
+        return {
+            playerCount,
+            activePlayers,
+            serverTime: Date.now()
+        };
     }
 }
 
-// Export for use in other modules
+// Export for use in other files
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = GameLogic;
 }
