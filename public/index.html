@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Pixel Arena v5.3 (Full Library)</title>
+    <title>Pixel Arena v5.4 (Debug Mode)</title>
     
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -15,13 +15,12 @@
         .font-retro { font-family: 'Orbitron', sans-serif; }
         
         .game-card { background: #111113; border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; transition: 0.3s; }
-        .pixel-border { border: 1px solid rgba(0, 240, 255, 0.4); box-shadow: 0 0 15px rgba(0, 240, 255, 0.1); }
+        .pixel-border { border: 1px solid rgba(0, 240, 255, 0.4); }
         
         .btn-action { font-weight: 800; font-size: 9px; border-radius: 6px; text-transform: uppercase; transition: 0.2s; border: none; cursor: pointer; }
         .btn-action:active { transform: scale(0.95); }
         .btn-p1 { background: #00f0ff; color: black; }
-        .btn-p2 { background: #ff003c; color: white; }
-
+        
         .nav-tab { flex: 1; padding: 15px 0; font-size: 10px; font-weight: bold; text-transform: uppercase; color: #444; border-bottom: 2px solid transparent; background: transparent; border: none; }
         .nav-tab.active { color: #00f0ff; border-color: #00f0ff; background: linear-gradient(to top, rgba(0,240,255,0.05), transparent); }
 
@@ -35,6 +34,9 @@
         .dpad-btn:active { background: #00f0ff; color: black; }
         .action-btn { width: 60px; height: 60px; border-radius: 50%; font-weight: bold; font-size: 20px; display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 4px 0 rgba(0,0,0,0.5); }
         .action-btn:active { transform: translateY(4px); box-shadow: none; }
+
+        /* ОТЛАДОЧНЫЙ МОНИТОР */
+        #debug-log { position: absolute; top: 0; left: 0; z-index: 9999; background: rgba(0,0,0,0.8); color: #00ff00; font-size: 8px; padding: 5px; width: 100%; max-height: 50%; overflow-y: auto; pointer-events: none; }
     </style>
 </head>
 <body class="flex flex-col h-screen">
@@ -48,7 +50,7 @@
     </header>
 
     <nav class="flex bg-zinc-950 border-b border-white/5 z-50">
-        <button id="tab-multi" class="nav-tab active" onclick="switchTab('multi')">Library</button>
+        <button id="tab-multi" class="nav-tab active">Library</button>
     </nav>
 
     <main id="main-content" class="flex-1 overflow-y-auto p-4 bg-black pb-24">
@@ -63,12 +65,12 @@
         </div>
         
         <div id="emulator-wrapper">
+            <div id="debug-log"></div> <!-- СЮДА БУДУТ ПАДАТЬ ОШИБКИ -->
             <div id="game-container"></div>
         </div>
 
         <div id="controller-wrapper">
             <div class="flex justify-between items-center w-full max-w-md mx-auto h-full">
-                <!-- D-PAD -->
                 <div class="grid grid-cols-3 gap-2">
                     <div></div><button id="btn-up" class="dpad-btn">▲</button><div></div>
                     <button id="btn-left" class="dpad-btn">◀</button>
@@ -76,7 +78,6 @@
                     <button id="btn-right" class="dpad-btn">▶</button>
                     <div></div><button id="btn-down" class="dpad-btn">▼</button><div></div>
                 </div>
-                <!-- Action Buttons -->
                 <div class="flex flex-col gap-6 items-center">
                     <button id="btn-b" class="action-btn bg-yellow-500">B</button>
                     <div class="flex gap-4">
@@ -92,37 +93,30 @@
     </div>
 
     <script>
+        // --- ОТЛОВ ОШИБОК ДЛЯ ДИАГНОСТИКИ ---
+        function logDebug(msg, isError = false) {
+            const logBox = document.getElementById('debug-log');
+            logBox.innerHTML += `<div style="color: ${isError ? '#ff4444' : '#00ff00'}">> ${msg}</div>`;
+            console.log(msg);
+        }
+
+        window.onerror = function(message, source, lineno, colno, error) {
+            logDebug(`ERROR: ${message} (Line ${lineno})`, true);
+            return true;
+        };
+
         (function() {
-            var isHost = false; 
-            
-            // Карта кнопок
             var mapP1 = { UP: "ArrowUp", DOWN: "ArrowDown", LEFT: "ArrowLeft", RIGHT: "ArrowRight", A: "KeyX", B: "KeyZ", C: "KeyC", START: "Enter" };
             
-            // ТВОИ ИГРЫ (Точные названия файлов с твоего скриншота)
             const ALL_GAMES = [
                 { id: 'battletoads.md', title: 'Battletoads', core: 'sega', color: '#00ff66' },
-                { id: 'btdd.md', title: 'BT & Double Dragon', core: 'sega', color: '#00ff66' },
-                { id: 'tmnt.md', title: 'TMNT Hyperstone', core: 'sega', color: '#ffcc00' },
                 { id: 'sonic.bin', title: 'Sonic The Hedgehog', core: 'sega', color: '#00f0ff' },
-                { id: 'sonic2.md', title: 'Sonic 2', core: 'sega', color: '#00f0ff' },
-                { id: 'comix.md', title: 'Comix Zone', core: 'sega', color: '#ffcc00' },
-                { id: 'roadrash.md', title: 'Road Rash', core: 'sega', color: '#ff003c' },
-                { id: 'sunset.md', title: 'Sunset Riders', core: 'sega', color: '#ff9900' },
-                { id: 'jurassic.md', title: 'Jurassic Park', core: 'sega', color: '#ff003c' },
-                { id: 'lionking.md', title: 'The Lion King', core: 'sega', color: '#ffcc00' },
-                { id: 'simpsons.md', title: 'The Simpsons', core: 'sega', color: '#00f0ff' },
-                { id: 'tanks.nes', title: 'Battle City (Tanks)', core: 'nes', color: '#aaaaaa' },
-                { id: 'realmonsters.sfc', title: 'Real Monsters', core: 'snes', color: '#9900ff' },
-                { id: 'tinytoon_sega.md', title: 'Tiny Toon (Sega)', core: 'sega', color: '#00f0ff' },
-                { id: 'tinytoon1.nes', title: 'Tiny Toon 1', core: 'nes', color: '#00f0ff' },
-                { id: 'tinytoon2.nes', title: 'Tiny Toon 2', core: 'nes', color: '#00f0ff' },
-                { id: '1200in1.nes', title: '1200 in 1 (Dendy)', core: 'nes', color: '#aaaaaa' }
+                { id: 'umk3.md', title: 'Mortal Kombat 3', core: 'sega', color: '#ff003c' }
             ];
 
             document.addEventListener('DOMContentLoaded', function() {
                 lucide.createIcons();
                 
-                // Отрисовка списка
                 document.getElementById('list-multi').innerHTML = ALL_GAMES.map(g => `
                     <div class="game-card p-4 flex justify-between items-center border-l-4" style="border-left-color: ${g.color}">
                         <div>
@@ -135,46 +129,60 @@
                     </div>
                 `).join('');
 
-                // --- ЗАПУСК ЭМУЛЯТОРА ЧЕРЕЗ JSDELIVR CDN ---
+                // --- САМЫЙ БЕЗОПАСНЫЙ СПОСОБ ЗАПУСКА ---
                 function loadEmulator(romFile, core) {
                     document.getElementById('game-overlay').style.display = 'flex';
+                    logDebug(`Starting Engine: ${core}`);
+                    logDebug(`Loading ROM: ${romFile}`);
                     
                     var baseUrl = window.location.origin;
                     if (!baseUrl || baseUrl === 'null') {
                         baseUrl = window.location.protocol + "//" + window.location.host;
                     }
                     
+                    // Обход кэша Телеграма (добавляем ?v=цифры к игре)
+                    var safeRomUrl = baseUrl + '/' + romFile + '?v=' + Date.now();
+                    logDebug(`Target URL: ${safeRomUrl}`);
+
                     window.EJS_player = '#game-container';
                     window.EJS_core = core;
-                    window.EJS_gameUrl = baseUrl + '/' + romFile; 
+                    window.EJS_gameUrl = safeRomUrl; 
                     
-                    window.EJS_pathtodata = 'https://cdn.jsdelivr.net/gh/EmulatorJS/EmulatorJS@main/data/';
+                    // Официальный стабильный CDN Эмулятора
+                    window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
                     window.EJS_startOnLoaded = true;
                     
                     var s = document.createElement('script'); 
-                    s.src = 'https://cdn.jsdelivr.net/gh/EmulatorJS/EmulatorJS@main/data/loader.js';
+                    s.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
+                    
+                    s.onload = function() { logDebug("loader.js downloaded successfully."); };
+                    s.onerror = function() { logDebug("FAILED to download loader.js", true); };
+                    
                     document.body.appendChild(s);
                 }
 
                 window.app = {
                     playSolo: function(rom, core) {
-                        isHost = true; 
                         document.getElementById('game-tag').innerText = "PLAYING: " + rom;
                         loadEmulator(rom, core);
                     }
                 };
 
-                // ПРИВЯЗКА КНОПОК ДЖОЙСТИКА
                 function bind(id, btnName) {
                     var el = document.getElementById(id);
-                    function handlePress(isPressed) {
-                        if (isPressed && window.Telegram && window.Telegram.WebApp) window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
-                        var code = mapP1[btnName];
-                        if(code) window.dispatchEvent(new KeyboardEvent(isPressed ? 'keydown' : 'keyup', { code: code }));
-                    }
-                    el.addEventListener('pointerdown', e => { e.preventDefault(); handlePress(true); });
-                    el.addEventListener('pointerup', e => { e.preventDefault(); handlePress(false); });
-                    el.addEventListener('pointerleave', e => { e.preventDefault(); handlePress(false); });
+                    el.addEventListener('pointerdown', e => { 
+                        e.preventDefault(); 
+                        if (window.Telegram && window.Telegram.WebApp) window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
+                        if(mapP1[btnName]) window.dispatchEvent(new KeyboardEvent('keydown', { code: mapP1[btnName] }));
+                    });
+                    el.addEventListener('pointerup', e => { 
+                        e.preventDefault(); 
+                        if(mapP1[btnName]) window.dispatchEvent(new KeyboardEvent('keyup', { code: mapP1[btnName] }));
+                    });
+                    el.addEventListener('pointerleave', e => { 
+                        e.preventDefault(); 
+                        if(mapP1[btnName]) window.dispatchEvent(new KeyboardEvent('keyup', { code: mapP1[btnName] }));
+                    });
                 }
 
                 bind('btn-up', 'UP'); bind('btn-down', 'DOWN'); bind('btn-left', 'LEFT'); bind('btn-right', 'RIGHT');
