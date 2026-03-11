@@ -7,22 +7,24 @@
     <style>
         body { margin: 0; background: #000; overflow: hidden; }
         #game-container { width: 100vw; height: 50vh; }
-        .controls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 20px; background: #111; }
-        .btn { background: #333; color: white; padding: 20px; border-radius: 8px; border: none; font-weight: bold; }
+        .grid-controls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 20px; }
+        .btn { background: #333; color: white; padding: 25px; border-radius: 12px; border: none; font-weight: bold; }
+        .btn:active { background: #00f0ff; color: black; }
     </style>
 </head>
 <body>
     <div id="game-container"></div>
-    <div class="controls">
-        <button class="btn" onpointerdown="input('UP', true)" onpointerup="input('UP', false)">▲</button>
-        <button class="btn" onpointerdown="input('START', true)" onpointerup="input('START', false)">START</button>
-        <button class="btn" onpointerdown="input('A', true)" onpointerup="input('A', false)">A</button>
+    <div class="grid-controls">
+        <!-- Кнопки вызывают функцию press(code) -->
+        <button class="btn" onpointerdown="press('UP', true)" onpointerup="press('UP', false)">▲</button>
+        <button class="btn" onpointerdown="press('START', true)" onpointerup="press('START', false)">START</button>
+        <button class="btn" onpointerdown="press('A', true)" onpointerup="press('A', false)">A</button>
     </div>
 
     <script>
         window.EJS_player = '#game-container';
         window.EJS_core = 'sega';
-        window.EJS_gameUrl = '/battletoads.md';
+        window.EJS_gameUrl = '/battletoads.md'; 
         window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
         window.EJS_startOnLoaded = true;
         
@@ -30,23 +32,29 @@
         s.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
         document.body.appendChild(s);
 
-        // Прямая функция управления через EmulatorJS API
-        function input(btn, isPressed) {
+        // ПРЯМОЕ УПРАВЛЕНИЕ ЧЕРЕЗ API
+        function press(btn, isPressed) {
             if (!window.EJS_emulator) return;
             
-            // Внутренние коды EmulatorJS
+            // Карты кодов для Sega Genesis
             const codes = {
                 'UP': 38, 'DOWN': 40, 'LEFT': 37, 'RIGHT': 39,
                 'A': 88, 'B': 90, 'C': 67, 'START': 13
             };
             
-            const e = new KeyboardEvent(isPressed ? 'keydown' : 'keyup', {
-                keyCode: codes[btn],
-                which: codes[btn],
-                bubbles: true
+            const key = codes[btn];
+            
+            // Имитируем нажатие на самом движке эмулятора
+            const event = new KeyboardEvent(isPressed ? 'keydown' : 'keyup', {
+                keyCode: key,
+                which: key,
+                bubbles: true,
+                cancelable: true
             });
             
-            document.dispatchEvent(e);
+            // Шлем событие и в документ, и в сам эмулятор
+            document.dispatchEvent(event);
+            window.EJS_emulator.ui.dispatchEvent(event);
         }
     </script>
 </body>
