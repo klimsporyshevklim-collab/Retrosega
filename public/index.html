@@ -1,71 +1,30 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Pixel Kombat Arena</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="/socket.io/socket.io.js"></script>
+    <title>DEBUG V9</title>
     <style>
-        body { background: #000; color: white; margin: 0; font-family: sans-serif; }
-        #game-container { width: 100vw; height: 50vh; background: #000; }
-        .btn { background: #333; padding: 20px; border-radius: 50%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; user-select: none; }
+        body { background: #000; color: #fff; font-family: monospace; padding: 10px; font-size: 12px; }
+        .err { color: #ff0000; }
+        .ok { color: #00ff00; }
     </style>
 </head>
 <body>
-    <div id="game-container"></div>
-    <div class="p-4 grid grid-cols-3 gap-4 justify-items-center">
-        <button class="btn" onpointerdown="send('UP', true)" onpointerup="send('UP', false)">▲</button>
-        <button class="btn" onpointerdown="send('A', true)" onpointerup="send('A', false)">A</button>
-        <button class="btn" onpointerdown="send('START', true)" onpointerup="send('START', false)">S</button>
-    </div>
-
+    <div id="log">Запуск проверки...</div>
     <script>
-        const socket = io();
-        let isPlayer1 = true;
-        let currentRoom = null;
-
-        // Карта для эмулятора: P1 и P2
-        const mapP1 = { UP: "ArrowUp", DOWN: "ArrowDown", LEFT: "ArrowLeft", RIGHT: "ArrowRight", A: "KeyX", B: "KeyZ", C: "KeyC", START: "Enter" };
-        const mapP2 = { UP: "KeyW", DOWN: "KeyS", LEFT: "KeyA", RIGHT: "KeyD", A: "KeyJ", B: "KeyK", C: "KeyL", START: "Space" };
-
-        function initEmulator(rom) {
-            window.EJS_player = '#game-container';
-            window.EJS_core = 'sega';
-            window.EJS_gameUrl = '/' + rom;
-            window.EJS_pathtodata = '/data/';
-            window.EJS_startOnLoaded = true;
-            const s = document.createElement('script');
-            s.src = '/loader.js';
-            document.body.appendChild(s);
-        }
-
-        // Ключевая функция взаимодействия с Canvas
-        function fireKey(code, isDown) {
-            const canvas = document.querySelector('canvas');
-            if (!canvas) return;
-            canvas.focus();
-            const event = new KeyboardEvent(isDown ? 'keydown' : 'keyup', { code: code, bubbles: true });
-            canvas.dispatchEvent(event);
-        }
-
-        // Локальный джойстик
-        function send(btn, state) {
-            const code = isPlayer1 ? mapP1[btn] : mapP2[btn];
-            fireKey(code, state);
-            if(currentRoom) {
-                socket.emit('inputSync', { roomId: currentRoom, player: isPlayer1 ? 1 : 2, button: btn, state: state });
+        const log = (m, isErr) => document.getElementById('log').innerHTML += `<div class="${isErr ? 'err' : 'ok'}">${m}</div>`;
+        
+        async function check() {
+            const files = ['/loader.js', '/battletoads.md', '/data/'];
+            for(let f of files) {
+                try {
+                    const res = await fetch(f);
+                    if(res.ok) log("✅ Файл найден: " + f);
+                    else log("❌ ОШИБКА 404: " + f, true);
+                } catch(e) { log("❌ ОШИБКА СЕТИ: " + f, true); }
             }
         }
-
-        // Прием от другого игрока
-        socket.on('inputSync', (data) => {
-            const map = (data.player === 1) ? mapP1 : mapP2;
-            fireKey(map[data.button], data.state);
-        });
-
-        // Запуск
-        initEmulator('battletoads.md'); // Или твой файл
+        check();
     </script>
 </body>
 </html>
