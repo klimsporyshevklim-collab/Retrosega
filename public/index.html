@@ -1,59 +1,25 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Pixel Arena v7.0</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdn.emulatorjs.org/stable/data/loader.js"></script>
     <style>
-        body { background: #000; color: white; margin: 0; overflow: hidden; font-family: sans-serif; }
-        #game-frame { width: 100%; height: 50vh; border: none; background: #000; }
-        .control-pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 20px; justify-items: center; }
-        .btn { width: 60px; height: 60px; background: #333; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+        body { margin: 0; background: black; }
+        #game { width: 100vw; height: 100vh; }
     </style>
 </head>
 <body>
-
-    <!-- Меню выбора игр -->
-    <div id="menu" class="p-4 space-y-4">
-        <button onclick="launch('battletoads.md')" class="w-full bg-blue-600 p-4 rounded-xl font-bold">START BATTLETOADS</button>
-        <button onclick="launch('sonic.bin')" class="w-full bg-blue-600 p-4 rounded-xl font-bold">START SONIC</button>
-    </div>
-
-    <!-- Игровой контейнер -->
-    <div id="game-ui" class="hidden">
-        <iframe id="game-frame" src=""></iframe>
-        <div class="control-pad">
-            <button class="btn" onpointerdown="send('UP', true)" onpointerup="send('UP', false)">▲</button>
-            <button class="btn" onpointerdown="send('A', true)" onpointerup="send('A', false)">A</button>
-            <button class="btn" onpointerdown="send('START', true)" onpointerup="send('START', false)">S</button>
-        </div>
-    </div>
-
+    <div id="game"></div>
     <script>
-        const socket = io();
-        const map = { UP: "ArrowUp", DOWN: "ArrowDown", LEFT: "ArrowLeft", RIGHT: "ArrowRight", A: "KeyX", B: "KeyZ", C: "KeyC", START: "Enter" };
-
-        function launch(rom) {
-            document.getElementById('menu').classList.add('hidden');
-            document.getElementById('game-ui').classList.remove('hidden');
-            
-            // Запускаем через EmulatorJS официальный CDN с параметрами в URL
-            const iframe = document.getElementById('game-frame');
-            iframe.src = `https://cdn.emulatorjs.org/latest/index.html?system=sega&rom=/${rom}`;
-        }
-
-        function send(btn, state) {
-            // Отправляем на сервер для мультиплеера
-            socket.emit('inputSync', { btn, state });
-            // Имитируем локально (пока через костыль)
-            const code = map[btn];
-            if(code) {
-                window.dispatchEvent(new KeyboardEvent(state ? 'keydown' : 'keyup', { code: code }));
-            }
-        }
+        // Принудительно задаем настройки, чтобы не было выпадающего списка
+        window.EJS_player = "#game";
+        window.EJS_core = "sega"; // Ядро для Genesis
+        window.EJS_pathtodata = "https://cdn.emulatorjs.org/stable/data/";
+        
+        // Меняй этот путь в зависимости от того, какой ром хочешь запустить
+        // СЕЙЧАС СТОИТ BATTLETOADS.MD
+        window.EJS_gameUrl = "/battletoads.md"; 
+        
+        window.EJS_startOnLoaded = true;
     </script>
 </body>
 </html>
