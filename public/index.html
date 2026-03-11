@@ -1,39 +1,71 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Pixel Arena</title>
-    <!-- Подключаем ТВОИ локальные файлы из репозитория -->
-    <link rel="stylesheet" href="/data/emulator.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pixel Kombat Arena</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/socket.io/socket.io.js"></script>
     <style>
-        body { margin: 0; background: #000; color: white; overflow: hidden; }
-        #game-container { width: 100vw; height: 100vh; }
+        body { background: #000; color: white; margin: 0; font-family: sans-serif; }
+        #game-container { width: 100vw; height: 50vh; background: #000; }
+        .btn { background: #333; padding: 20px; border-radius: 50%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; user-select: none; }
     </style>
 </head>
 <body>
     <div id="game-container"></div>
-    <div id="debug" style="position:fixed; top:0; color:lime; font-size:10px;"></div>
+    <div class="p-4 grid grid-cols-3 gap-4 justify-items-center">
+        <button class="btn" onpointerdown="send('UP', true)" onpointerup="send('UP', false)">▲</button>
+        <button class="btn" onpointerdown="send('A', true)" onpointerup="send('A', false)">A</button>
+        <button class="btn" onpointerdown="send('START', true)" onpointerup="send('START', false)">S</button>
+    </div>
 
     <script>
-        const log = (m) => document.getElementById('debug').innerHTML += m + "<br>";
-        
-        // 1. Указываем путь к ТВОИМ локальным файлам
-        window.EJS_player = '#game-container';
-        window.EJS_core = 'sega';
-        window.EJS_gameUrl = '/battletoads.md'; 
-        window.EJS_pathtodata = '/data/'; // Путь к папке data в public/
-        window.EJS_startOnLoaded = true;
+        const socket = io();
+        let isPlayer1 = true;
+        let currentRoom = null;
 
-        log("Загрузка твоего simple-loader.js...");
+        // Карта для эмулятора: P1 и P2
+        const mapP1 = { UP: "ArrowUp", DOWN: "ArrowDown", LEFT: "ArrowLeft", RIGHT: "ArrowRight", A: "KeyX", B: "KeyZ", C: "KeyC", START: "Enter" };
+        const mapP2 = { UP: "KeyW", DOWN: "KeyS", LEFT: "KeyA", RIGHT: "KeyD", A: "KeyJ", B: "KeyK", C: "KeyL", START: "Space" };
 
-        // 2. Грузим ТВОЙ loader
-        const s = document.createElement('script');
-        s.src = '/simple-loader.js';
-        
-        s.onload = () => log("OK: simple-loader.js загружен.");
-        s.onerror = () => log("ERROR: Не найден /simple-loader.js!", true);
-        
-        document.body.appendChild(s);
+        function initEmulator(rom) {
+            window.EJS_player = '#game-container';
+            window.EJS_core = 'sega';
+            window.EJS_gameUrl = '/' + rom;
+            window.EJS_pathtodata = '/data/';
+            window.EJS_startOnLoaded = true;
+            const s = document.createElement('script');
+            s.src = '/loader.js';
+            document.body.appendChild(s);
+        }
+
+        // Ключевая функция взаимодействия с Canvas
+        function fireKey(code, isDown) {
+            const canvas = document.querySelector('canvas');
+            if (!canvas) return;
+            canvas.focus();
+            const event = new KeyboardEvent(isDown ? 'keydown' : 'keyup', { code: code, bubbles: true });
+            canvas.dispatchEvent(event);
+        }
+
+        // Локальный джойстик
+        function send(btn, state) {
+            const code = isPlayer1 ? mapP1[btn] : mapP2[btn];
+            fireKey(code, state);
+            if(currentRoom) {
+                socket.emit('inputSync', { roomId: currentRoom, player: isPlayer1 ? 1 : 2, button: btn, state: state });
+            }
+        }
+
+        // Прием от другого игрока
+        socket.on('inputSync', (data) => {
+            const map = (data.player === 1) ? mapP1 : mapP2;
+            fireKey(map[data.button], data.state);
+        });
+
+        // Запуск
+        initEmulator('battletoads.md'); // Или твой файл
     </script>
 </body>
 </html>
