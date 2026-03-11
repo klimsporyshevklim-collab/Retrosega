@@ -5,57 +5,48 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Pixel Arena</title>
     <style>
-        body { margin: 0; background: #000; color: #fff; font-family: sans-serif; overflow: hidden; }
+        body { margin: 0; background: #000; overflow: hidden; }
         #game-container { width: 100vw; height: 50vh; }
-        
-        /* Сетка геймпада */
-        .controls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; padding: 20px; align-items: center; justify-items: center; }
-        .d-pad { display: grid; grid-template-columns: repeat(3, 60px); gap: 5px; }
-        .btn { background: #333; border: 1px solid #555; border-radius: 50%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; font-weight: bold; }
-        .btn-action { background: #555; width: 65px; height: 65px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
-        .btn:active { background: #00f0ff; color: #000; }
+        .controls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 20px; background: #111; }
+        .btn { background: #333; color: white; padding: 20px; border-radius: 8px; border: none; font-weight: bold; }
     </style>
 </head>
 <body>
     <div id="game-container"></div>
-    
     <div class="controls">
-        <!-- D-PAD -->
-        <div class="d-pad">
-            <div></div><button class="btn" onpointerdown="send('ArrowUp', true)" onpointerup="send('ArrowUp', false)">▲</button><div></div>
-            <button class="btn" onpointerdown="send('ArrowLeft', true)" onpointerup="send('ArrowLeft', false)">◀</button>
-            <div style="width:60px; height:60px;"></div>
-            <button class="btn" onpointerdown="send('ArrowRight', true)" onpointerup="send('ArrowRight', false)">▶</button>
-            <div></div><button class="btn" onpointerdown="send('ArrowDown', true)" onpointerup="send('ArrowDown', false)">▼</button><div></div>
-        </div>
-        <!-- Кнопки действий -->
-        <div style="display:flex; gap:10px;">
-            <button class="btn-action" onpointerdown="send('KeyX', true)" onpointerup="send('KeyX', false)">A</button>
-            <button class="btn-action" onpointerdown="send('KeyZ', true)" onpointerup="send('KeyZ', false)">B</button>
-            <button class="btn-action" onpointerdown="send('KeyC', true)" onpointerup="send('<KeyC', false)">C</button>
-        </div>
-        <!-- Start -->
-        <button class="btn" style="width:80px; border-radius:10px;" onpointerdown="send('Enter', true)" onpointerup="send('Enter', false)">START</button>
+        <button class="btn" onpointerdown="input('UP', true)" onpointerup="input('UP', false)">▲</button>
+        <button class="btn" onpointerdown="input('START', true)" onpointerup="input('START', false)">START</button>
+        <button class="btn" onpointerdown="input('A', true)" onpointerup="input('A', false)">A</button>
     </div>
 
     <script>
         window.EJS_player = '#game-container';
         window.EJS_core = 'sega';
-        window.EJS_gameUrl = '/battletoads.md'; 
+        window.EJS_gameUrl = '/battletoads.md';
         window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
         window.EJS_startOnLoaded = true;
+        
         const s = document.createElement('script');
         s.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
         document.body.appendChild(s);
 
-        function send(code, isDown) {
-            const canvas = document.querySelector('canvas');
-            if (canvas) {
-                canvas.focus();
-                const event = new KeyboardEvent(isDown ? 'keydown' : 'keyup', { code: code, bubbles: true });
-                canvas.dispatchEvent(event);
-                document.dispatchEvent(event);
-            }
+        // Прямая функция управления через EmulatorJS API
+        function input(btn, isPressed) {
+            if (!window.EJS_emulator) return;
+            
+            // Внутренние коды EmulatorJS
+            const codes = {
+                'UP': 38, 'DOWN': 40, 'LEFT': 37, 'RIGHT': 39,
+                'A': 88, 'B': 90, 'C': 67, 'START': 13
+            };
+            
+            const e = new KeyboardEvent(isPressed ? 'keydown' : 'keyup', {
+                keyCode: codes[btn],
+                which: codes[btn],
+                bubbles: true
+            });
+            
+            document.dispatchEvent(e);
         }
     </script>
 </body>
