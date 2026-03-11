@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Pixel Arena v6.0 (True Netplay)</title>
+    <title>Pixel Arena v6.1</title>
     
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     
-    <!-- ПОДКЛЮЧАЕМ ТВОЙ СОКЕТ (ВМЕСТО FIREBASE) -->
+    <!-- ПОДКЛЮЧАЕМ СОКЕТЫ -->
     <script src="/socket.io/socket.io.js"></script>
 
     <style>
@@ -44,20 +44,31 @@
 
     <header class="p-4 bg-zinc-950 flex justify-between items-center z-50 border-b border-white/5">
         <h1 class="text-white font-retro font-bold text-xs tracking-tighter uppercase italic">Arena<span class="text-[#00f0ff]">X</span></h1>
-        <div id="connection-status" class="text-[8px] text-yellow-500 bg-yellow-500/10 px-2 py-1 rounded border border-yellow-500/30 font-bold">CONNECTING...</div>
+        <div id="conn-status" class="text-[8px] text-yellow-500 bg-yellow-500/10 px-2 py-1 rounded font-bold">CONNECTING...</div>
     </header>
 
     <nav class="flex bg-zinc-950 border-b border-white/5 z-50">
-        <button id="tab-multi" class="nav-tab active">Library</button>
+        <button class="nav-tab active">Library</button>
     </nav>
 
-    <main id="main-content" class="flex-1 overflow-y-auto p-4 bg-black pb-24">
-        <div id="screen-multi" class="space-y-4"><div id="list-multi"></div></div>
+    <main class="flex-1 overflow-y-auto p-4 bg-black pb-24">
+        <div id="list-multi" class="space-y-4"></div>
     </main>
+
+    <!-- МОДАЛЬНОЕ ОКНО ДЛЯ ИГРОКА 2 (ВМЕСТО PROMPT) -->
+    <div id="join-modal" class="hidden fixed inset-0 bg-black/90 z-[5000] flex items-center justify-center p-6">
+        <div class="bg-zinc-900 p-6 rounded-2xl border border-[#00f0ff]/50 w-full max-w-xs text-center shadow-2xl">
+            <h3 class="text-white font-bold mb-2">JOIN LOBBY</h3>
+            <p class="text-[8px] text-gray-400 mb-4">Enter the 4-character HOST ID</p>
+            <input id="lobby-input" type="text" class="w-full bg-black border border-white/20 p-3 rounded text-white text-center font-bold tracking-[0.3em] uppercase mb-4 focus:border-[#00f0ff] outline-none" maxlength="4" autocomplete="off">
+            <button id="btn-submit-join" class="w-full bg-[#00f0ff] text-black font-black py-3 rounded mb-2">CONNECT P2</button>
+            <button onclick="document.getElementById('join-modal').classList.add('hidden')" class="w-full text-gray-500 py-2 text-xs font-bold">CANCEL</button>
+        </div>
+    </div>
 
     <!-- ИГРОВОЙ ОВЕРЛЕЙ -->
     <div id="game-overlay">
-        <div class="h-10 bg-zinc-950 border-b border-primary/20 flex justify-between items-center px-4">
+        <div class="h-10 bg-zinc-950 border-b border-[#00f0ff]/20 flex justify-between items-center px-4">
             <span id="game-tag" class="text-[9px] font-bold text-[#00f0ff] uppercase tracking-widest bg-[#00f0ff]/10 px-2 py-1 rounded">Loading...</span>
             <button onclick="location.reload()" class="text-zinc-500 bg-zinc-800 px-2 py-1 rounded text-[8px] uppercase font-bold">QUIT</button>
         </div>
@@ -66,6 +77,7 @@
             <div id="game-container"></div>
         </div>
 
+        <!-- ГЕЙМПАД -->
         <div id="controller-wrapper">
             <div class="flex justify-between items-center w-full max-w-md mx-auto h-full">
                 <!-- D-PAD -->
@@ -86,33 +98,33 @@
                 </div>
             </div>
             <div class="text-center mt-4">
-                <button id="btn-start" class="w-32 py-2 bg-zinc-800 text-zinc-400 rounded-full text-[10px] font-bold uppercase border border-zinc-700 tracking-widest">START</button>
+                <button id="btn-start" class="w-32 py-2 bg-zinc-800 text-zinc-400 rounded-full text-[10px] font-bold uppercase tracking-widest">START</button>
             </div>
         </div>
     </div>
 
     <script>
         (function() {
-            // Инициализация Socket.io
-            const socket = io();
+            let socket;
+            try { 
+                socket = io(); 
+                socket.on('connect', () => {
+                    document.getElementById('conn-status').innerText = "SERVER ONLINE";
+                    document.getElementById('conn-status').className = "text-[8px] text-[#00ff66] bg-[#00ff66]/10 px-2 py-1 rounded font-bold";
+                });
+            } catch(e) { console.error("Socket error"); }
+
             let currentRoom = null;
-            let isPlayer1 = true; // По умолчанию мы Игрок 1
+            let isPlayer1 = true; 
 
-            // Карта кнопок Эмулятора
-            // P1 = Клавиатурные стрелки и X, Z, C
-            const mapP1 = { UP: "ArrowUp", DOWN: "ArrowDown", LEFT: "ArrowLeft", RIGHT: "ArrowRight", A: "KeyX", B: "KeyZ", C: "KeyC", START: "Enter" };
-            // P2 = Клавиатурные W,A,S,D и J, K, L (Эмулятор Сеги понимает это как джойстик 2)
-            const mapP2 = { UP: "KeyW", DOWN: "KeyS", LEFT: "KeyA", RIGHT: "KeyD", A: "KeyJ", B: "KeyK", C: "KeyL", START: "Space" };
+            // ЦИФРОВЫЕ КОДЫ КЛАВИШ (АППАРАТНЫЙ УРОВЕНЬ ДЛЯ ЭМУЛЯТОРА)
+            // P1 = Стрелки, X, Z, C, Enter
+            const mapP1 = { UP: 38, DOWN: 40, LEFT: 37, RIGHT: 39, A: 88, B: 90, C: 67, START: 13 };
+            // P2 = Numpad 8,2,4,6 и 7,9,3,1 (Стандарт для второго джойстика во многих ядрах)
+            const mapP2 = { UP: 104, DOWN: 98, LEFT: 100, RIGHT: 102, A: 103, B: 105, C: 99, START: 97 };
 
-            // Статус подключения
-            socket.on('connect', () => {
-                const status = document.getElementById('connection-status');
-                status.innerText = "SERVER ONLINE";
-                status.className = "text-[8px] text-[#00ff66] bg-[#00ff66]/10 px-2 py-1 rounded border border-[#00ff66]/30 font-bold";
-            });
-
-            const ALL_GAMES = [
-                { id: 'battletoads.md', title: 'Battletoads', core: 'sega', color: '#00ff66' },
+            const GAMES = [
+                { id: 'Battletoads.md', title: 'Battletoads', core: 'sega', color: '#00ff66' },
                 { id: 'umk3.md', title: 'Mortal Kombat 3', core: 'sega', color: '#ff003c' },
                 { id: 'sonic.bin', title: 'Sonic The Hedgehog', core: 'sega', color: '#00f0ff' }
             ];
@@ -120,16 +132,15 @@
             document.addEventListener('DOMContentLoaded', function() {
                 lucide.createIcons();
                 
-                // Рендер списка с двумя кнопками
-                document.getElementById('list-multi').innerHTML = ALL_GAMES.map(g => `
+                document.getElementById('list-multi').innerHTML = GAMES.map(g => `
                     <div class="game-card p-4 flex justify-between items-center border-l-4" style="border-left-color: ${g.color}">
                         <div>
                             <h4 class="text-xs font-bold uppercase italic">${g.title}</h4>
                             <p class="text-[7px] text-zinc-500 font-bold uppercase tracking-widest">${g.core} ENGINE</p>
                         </div>
                         <div class="flex gap-2">
-                            <button onclick="window.app.createRoom('${g.id}', '${g.core}')" class="btn-action btn-p1 px-4 py-2">HOST LOBBY</button>
-                            <button onclick="window.app.joinRoom('${g.id}', '${g.core}')" class="btn-action btn-p2 px-4 py-2">JOIN P2</button>
+                            <button onclick="window.app.hostRoom('${g.id}', '${g.core}')" class="btn-action btn-p1 px-4 py-2">HOST LOBBY</button>
+                            <button onclick="window.app.showJoinModal('${g.id}', '${g.core}')" class="btn-action btn-p2 px-4 py-2">JOIN P2</button>
                         </div>
                     </div>
                 `).join('');
@@ -151,55 +162,80 @@
                     document.body.appendChild(s);
                 }
 
+                // Переменные для временного хранения данных Игрока 2 перед вводом кода
+                let pendingRom = '';
+                let pendingCore = '';
+
                 window.app = {
-                    createRoom: function(rom, core) {
+                    hostRoom: function(rom, core) {
                         isPlayer1 = true;
-                        currentRoom = Math.random().toString(36).substring(2, 6).toUpperCase(); // Код из 4 букв
-                        socket.emit('createRoom', currentRoom);
+                        currentRoom = Math.random().toString(36).substring(2, 6).toUpperCase(); 
+                        if(socket) socket.emit('createRoom', currentRoom);
                         
                         document.getElementById('game-tag').innerText = `HOST ID: ${currentRoom}`;
                         loadEmulator(rom, core);
                     },
-                    joinRoom: function(rom, core) {
-                        const roomCode = prompt("Введи 4 символа HOST ID (например, A7X2):");
-                        if (!roomCode) return;
-                        
-                        isPlayer1 = false; // Мы подключаемся как Игрок 2
-                        currentRoom = roomCode.toUpperCase();
-                        socket.emit('joinRoom', currentRoom);
-                        
-                        document.getElementById('game-tag').innerText = `CONNECTED AS P2`;
-                        loadEmulator(rom, core);
+                    showJoinModal: function(rom, core) {
+                        pendingRom = rom;
+                        pendingCore = core;
+                        document.getElementById('join-modal').classList.remove('hidden');
+                        document.getElementById('lobby-input').focus();
                     }
                 };
 
-                // --- ЛОГИКА СИНХРОНИЗАЦИИ ---
-
-                // 1. Получаем нажатия от друга по сети
-                socket.on('inputSync', (data) => {
-                    // data = { player: 1 или 2, button: 'UP', state: true/false }
-                    const mapToUse = (data.player === 1) ? mapP1 : mapP2;
-                    const keyCode = mapToUse[data.button];
+                // Кнопка подтверждения в модалке Игрока 2
+                document.getElementById('btn-submit-join').onclick = function() {
+                    const code = document.getElementById('lobby-input').value.toUpperCase();
+                    if(code.length < 4) return;
                     
-                    if(keyCode) {
-                        window.dispatchEvent(new KeyboardEvent(data.state ? 'keydown' : 'keyup', { code: keyCode }));
-                    }
-                });
+                    document.getElementById('join-modal').classList.add('hidden');
+                    isPlayer1 = false; 
+                    currentRoom = code;
+                    
+                    if(socket) socket.emit('joinRoom', currentRoom);
+                    
+                    document.getElementById('game-tag').innerText = `P2 CONNECTED: ${currentRoom}`;
+                    loadEmulator(pendingRom, pendingCore);
+                };
 
-                // 2. Нажимаем свои кнопки и отправляем другу
+                // --- ХАРДКОРНАЯ СИМУЛЯЦИЯ НАЖАТИЯ ДЛЯ ЭМУЛЯТОРА ---
+                function fireKey(keyCode, isDown) {
+                    var eventType = isDown ? 'keydown' : 'keyup';
+                    var e = new Event(eventType, { bubbles: true, cancelable: true });
+                    e.keyCode = keyCode;
+                    e.which = keyCode;
+                    
+                    // Отправляем в документ (стандартно)
+                    document.dispatchEvent(e);
+                    
+                    // Отправляем напрямую в Canvas эмулятора (гарантирует срабатывание)
+                    var canvas = document.querySelector('canvas');
+                    if (canvas) canvas.dispatchEvent(e);
+                }
+
+                // Получаем нажатия от друга
+                if(socket) {
+                    socket.on('inputSync', (data) => {
+                        const mapToUse = (data.player === 1) ? mapP1 : mapP2;
+                        const keyCode = mapToUse[data.button];
+                        if(keyCode) fireKey(keyCode, data.state);
+                    });
+                }
+
+                // Жмем свои кнопки
                 function bind(id, btnName) {
                     var el = document.getElementById(id);
                     
                     function handlePress(isPressed) {
                         if (isPressed && window.Telegram && window.Telegram.WebApp) window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
                         
-                        // А) Нажимаем в СВОЕМ эмуляторе
+                        // 1. Нажимаем у себя
                         const myMap = isPlayer1 ? mapP1 : mapP2;
                         const myKeyCode = myMap[btnName];
-                        if(myKeyCode) window.dispatchEvent(new KeyboardEvent(isPressed ? 'keydown' : 'keyup', { code: myKeyCode }));
+                        if(myKeyCode) fireKey(myKeyCode, isPressed);
                         
-                        // Б) Отправляем нажатие ДРУГУ
-                        if (currentRoom) {
+                        // 2. Отправляем другу
+                        if (currentRoom && socket) {
                             socket.emit('inputSync', {
                                 roomId: currentRoom,
                                 player: isPlayer1 ? 1 : 2,
