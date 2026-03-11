@@ -2,38 +2,53 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Pixel Arena</title>
-    <!-- Подключаем loader напрямую -->
-    <script src="/loader.js"></script>
+    <title>DEBUG MODE</title>
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; }
-        #game-container { 
-            width: 100vw !important; 
-            height: 100vh !important; 
-            display: block !important;
-            position: absolute !important;
-            top: 0; left: 0;
-        }
-        .debug-text { color: #0f0; font-size: 10px; position: absolute; bottom: 10px; left: 10px; z-index: 9999; }
+        body { margin: 0; background: #000; color: #fff; font-family: monospace; }
+        #debug-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999; color: #ff0000; font-size: 14px; padding: 20px; overflow-y: auto; white-space: pre-wrap; }
+        #game-container { width: 100%; height: 100%; }
     </style>
 </head>
 <body>
+    <div id="debug-overlay"></div>
     <div id="game-container"></div>
-    <div id="log" class="debug-text">Запуск...</div>
 
     <script>
-        const log = (m) => document.getElementById('log').innerHTML += m + "<br>";
-        
+        // Глобальный перехватчик ошибок
+        const log = (msg) => {
+            const div = document.createElement('div');
+            div.textContent = msg;
+            document.getElementById('debug-overlay').appendChild(div);
+            console.log(msg);
+        };
+
+        window.onerror = (m, s, l) => log("ERROR: " + m + " at " + l);
+
+        log("--- СТАРТ ДИАГНОСТИКИ ---");
+
+        // Проверка наличия файла
+        fetch('/battletoads.md')
+            .then(r => {
+                if(r.ok) log("OK: Файл Battletoads.md найден.");
+                else log("ERROR: Battletoads.md не найден! Статус: " + r.status);
+            })
+            .catch(e => log("ERROR: Сетевая ошибка при поиске файла: " + e));
+
+        // Настройка
         window.EJS_player = '#game-container';
         window.EJS_core = 'sega';
-        window.EJS_gameUrl = '/battletoads.md'; 
-        window.EJS_pathtodata = '/data/'; 
+        window.EJS_gameUrl = '/battletoads.md';
+        window.EJS_pathtodata = '/data/';
         window.EJS_startOnLoaded = true;
 
-        // Дополнительная проверка, чтобы Telegram не блокировал
-        setTimeout(() => {
-            log("Попытка инициализации движка...");
-        }, 1000);
+        log("Инициализация loader.js...");
+        
+        // Загрузка
+        const s = document.createElement('script');
+        s.src = '/loader.js';
+        s.onload = () => log("OK: loader.js загружен.");
+        s.onerror = () => log("ERROR: loader.js не загружен!", true);
+        document.body.appendChild(s);
     </script>
 </body>
 </html>
