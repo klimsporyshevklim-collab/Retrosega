@@ -2,24 +2,25 @@
 <html>
 <head>
     <script src="https://cdn.emulatorjs.org/stable/data/loader.js"></script>
-    <style>
-        body { margin: 0; background: black; }
-        #game { width: 100vw; height: 100vh; }
-    </style>
+    <style>body { margin: 0; background: black; }</style>
 </head>
 <body>
     <div id="game"></div>
     <script>
-        // Принудительно задаем настройки, чтобы не было выпадающего списка
+        // Твоя строка Base64 (вставь её вместо многоточия)
+        const romBase64 = "ЗДЕСЬ_ДОЛЖНА_БЫТЬ_ТВОЯ_ОГРОМНАЯ_BASE64_СТРОКА"; 
+
         window.EJS_player = "#game";
-        window.EJS_core = "sega"; // Ядро для Genesis
+        window.EJS_core = "sega";
         window.EJS_pathtodata = "https://cdn.emulatorjs.org/stable/data/";
         
-        // Меняй этот путь в зависимости от того, какой ром хочешь запустить
-        // СЕЙЧАС СТОИТ BATTLETOADS.MD
-        window.EJS_gameUrl = "/battletoads.md"; 
-        
-        window.EJS_startOnLoaded = true;
+        // Превращаем Base64 обратно в бинарные данные для эмулятора
+        fetch('data:application/octet-stream;base64,' + romBase64)
+            .then(res => res.blob())
+            .then(blob => {
+                window.EJS_gameUrl = URL.createObjectURL(blob);
+                window.EJS_startOnLoaded = true;
+            });
     </script>
 </body>
 </html>
