@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Sega Arena</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <link rel="stylesheet" href="emulator.css">
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        body { margin:0; background:black; display:flex; flex-direction:column; height:100vh; font-family:sans-serif; }
+        #game-container { flex:1; }
+        .controls { display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:15px; background:#111; user-select:none; }
+        .dpad, .actions { display:grid; grid-template-columns:repeat(3, 1fr); gap:5px; justify-items:center; align-items:center; }
+        .btn { width:60px; height:60px; background:#333; border:1px solid #555; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; color:white; }
+        .btn:active { background:#00f0ff; color:#000; }
+    </style>
+</head>
+<body>
+    <div id="game-container"></div>
+    <div class="controls">
+        <div class="dpad">
+            <div></div> <button class="btn" onpointerdown="send('UP', true)" onpointerup="send('UP', false)">▲</button> <div></div>
+            <button class="btn" onpointerdown="send('LEFT', true)" onpointerup="send('LEFT', false)">◀</button>
+            <div></div>
+            <button class="btn" onpointerdown="send('RIGHT', true)" onpointerup="send('RIGHT', false)">▶</button>
+            <div></div> <button class="btn" onpointerdown="send('DOWN', true)" onpointerup="send('DOWN', false)">▼</button> <div></div>
+        </div>
+        <div class="actions">
+            <button class="btn" style="background:#f00" onpointerdown="send('A', true)" onpointerup="send('A', false)">A</button>
+            <button class="btn" style="background:#ff0" onpointerdown="send('B', true)" onpointerup="send('B', false)">B</button>
+            <button class="btn" style="background:#00f" onpointerdown="send('C', true)" onpointerup="send('C', false)">C</button>
+            <button class="btn" onpointerdown="send('START', true)" onpointerup="send('START', false)">S</button>
+        </div>
+    </div>
+    <script src="loader.js"></script>
+    <script>
+        window.EJS_player = '#game-container';
+        window.EJS_core = 'sega';
+        window.EJS_gameUrl = 'battletoads.bin';
+        window.EJS_pathtodata = 'data/';
+        const socket = io();
+        const keyMap = { UP: 'ArrowUp', DOWN: 'ArrowDown', LEFT: 'ArrowLeft', RIGHT: 'ArrowRight', A: 'KeyX', B: 'KeyZ', C: 'KeyC', START: 'Enter' };
+        function send(btn, isDown) {
+            socket.emit('input', { btn, isDown });
+            fire(keyMap[btn], isDown);
+        }
+        socket.on('input', (data) => fire(keyMap[data.btn], data.isDown));
+        function fire(code, isDown) {
+            const canvas = document.querySelector('canvas');
+            if (canvas) {
+                canvas.focus();
+                canvas.dispatchEvent(new KeyboardEvent(isDown ? 'keydown' : 'keyup', { code, bubbles: true }));
+            }
+        }
+    </script>
+</body>
+</html>
