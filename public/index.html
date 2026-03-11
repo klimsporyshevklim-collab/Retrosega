@@ -1,61 +1,50 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Pixel Arena</title>
+    <title>Pixel Kombat Arena</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { margin: 0; background: #000; overflow: hidden; }
-        #game-container { width: 100vw; height: 50vh; }
-        .grid-controls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 20px; }
-        .btn { background: #333; color: white; padding: 25px; border-radius: 12px; border: none; font-weight: bold; }
-        .btn:active { background: #00f0ff; color: black; }
+        body { margin: 0; background: #000; color: #fff; font-family: sans-serif; overflow: hidden; }
+        #game-frame { width: 100vw; height: 50vh; border: none; background: #000; }
+        .controls { height: 50vh; background: #111; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 20px; align-items: center; }
+        .btn { background: #222; border: 1px solid #444; border-radius: 12px; padding: 20px; text-align: center; font-weight: bold; }
+        .btn:active { background: #00f0ff; color: #000; }
     </style>
 </head>
 <body>
-    <div id="game-container"></div>
-    <div class="grid-controls">
-        <!-- Кнопки вызывают функцию press(code) -->
-        <button class="btn" onpointerdown="press('UP', true)" onpointerup="press('UP', false)">▲</button>
-        <button class="btn" onpointerdown="press('START', true)" onpointerup="press('START', false)">START</button>
-        <button class="btn" onpointerdown="press('A', true)" onpointerup="press('A', false)">A</button>
+
+    <!-- Экран игры (Iframe) -->
+    <iframe id="game-frame" src="about:blank"></iframe>
+
+    <!-- Панель управления -->
+    <div class="controls">
+        <button class="btn" onpointerdown="send('UP')">▲</button>
+        <button class="btn" onpointerdown="send('A')">A</button>
+        <button class="btn" onpointerdown="send('START')">START</button>
     </div>
 
     <script>
-        window.EJS_player = '#game-container';
-        window.EJS_core = 'sega';
-        window.EJS_gameUrl = '/battletoads.md'; 
-        window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
-        window.EJS_startOnLoaded = true;
-        
-        const s = document.createElement('script');
-        s.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
-        document.body.appendChild(s);
-
-        // ПРЯМОЕ УПРАВЛЕНИЕ ЧЕРЕЗ API
-        function press(btn, isPressed) {
-            if (!window.EJS_emulator) return;
-            
-            // Карты кодов для Sega Genesis
-            const codes = {
-                'UP': 38, 'DOWN': 40, 'LEFT': 37, 'RIGHT': 39,
-                'A': 88, 'B': 90, 'C': 67, 'START': 13
-            };
-            
-            const key = codes[btn];
-            
-            // Имитируем нажатие на самом движке эмулятора
-            const event = new KeyboardEvent(isPressed ? 'keydown' : 'keyup', {
-                keyCode: key,
-                which: key,
-                bubbles: true,
-                cancelable: true
-            });
-            
-            // Шлем событие и в документ, и в сам эмулятор
-            document.dispatchEvent(event);
-            window.EJS_emulator.ui.dispatchEvent(event);
+        // Запускаем игру внутри фрейма
+        function launch(rom) {
+            const frame = document.getElementById('game-frame');
+            // Официальный надежный путь
+            frame.src = `https://cdn.emulatorjs.org/stable/index.html?system=sega&rom=/${rom}`;
         }
+
+        // ОТПРАВКА КОМАНД В IFRAME (Pro метод)
+        function send(key) {
+            const frame = document.getElementById('game-frame');
+            // Эмулятор в iframe слушает сообщения от родительского окна
+            frame.contentWindow.postMessage({
+                type: 'key',
+                code: key
+            }, '*');
+        }
+
+        // Твой список игр
+        launch('battletoads.bin'); 
     </script>
 </body>
 </html>
