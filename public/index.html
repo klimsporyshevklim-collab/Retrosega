@@ -2,50 +2,37 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Pixel Kombat Arena</title>
-    <!-- ЭТОТ СКРИПТ ПОДКЛЮЧАЕТ ВСЁ НЕОБХОДИМОЕ -->
-    <script src="/socket.io/socket.io.js"></script>
+    <title>Pixel Arena</title>
     <script src="/loader.js"></script>
     <style>
-        body { margin: 0; background: #000; color: white; display: flex; flex-direction: column; height: 100vh; }
+        body { margin: 0; background: #000; display: flex; flex-direction: column; height: 100vh; }
         #game-container { flex: 1; width: 100%; }
-        .controls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 20px; background: #111; }
-        .btn { background: #222; padding: 20px; text-align: center; border-radius: 8px; border: 1px solid #444; }
+        .debug-console { color: #0f0; font-size: 10px; padding: 10px; }
     </style>
 </head>
 <body>
-
     <div id="game-container"></div>
-    
-    <div class="controls">
-        <button class="btn" onpointerdown="send('UP')" onpointerup="send('UP_UP')">UP</button>
-        <button class="btn" onpointerdown="send('A')" onpointerup="send('A_UP')">A</button>
-        <button class="btn" onpointerdown="send('START')" onpointerup="send('START_UP')">START</button>
-    </div>
+    <div id="log" class="debug-console">Loading...</div>
 
     <script>
-        // Инициализация эмулятора
-        window.EJS_player = "#game-container";
-        window.EJS_core = "sega";
-        window.EJS_gameUrl = "/battletoads.md"; // СТРОГО ПО ИМЕНИ ФАЙЛА
-        window.EJS_pathtodata = "/data/";
+        const log = (m) => document.getElementById('log').innerHTML += m + "<br>";
+        
+        window.EJS_player = '#game-container';
+        window.EJS_core = 'sega';
+        // Путь к файлу в public/
+        window.EJS_gameUrl = '/battletoads.md'; 
+        // Указываем папку data, которая лежит в public/
+        window.EJS_pathtodata = '/data/'; 
         window.EJS_startOnLoaded = true;
 
-        const socket = io();
+        // Проверка наличия файлов перед стартом
+        fetch('/battletoads.md')
+            .then(res => {
+                if(!res.ok) log("Ошибка: Battletoads.md не найден на сервере (404)");
+                else log("Файл Battletoads.md найден!");
+            });
 
-        function send(action) {
-            socket.emit('input', { action });
-            // Имитация нажатия для самого эмулятора
-            const keyMap = { 'UP': 'ArrowUp', 'A': 'KeyX', 'START': 'Enter' };
-            if(keyMap[action]) {
-                window.dispatchEvent(new KeyboardEvent('keydown', { code: keyMap[action] }));
-            }
-        }
-
-        socket.on('input', (data) => {
-            const keyMap = { 'UP': 'ArrowUp', 'A': 'KeyX', 'START': 'Enter' };
-            window.dispatchEvent(new KeyboardEvent('keydown', { code: keyMap[data.action] }));
-        });
+        log("Запуск EmulatorJS...");
     </script>
 </body>
 </html>
