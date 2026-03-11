@@ -2,179 +2,169 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Pixel Arena v6.5</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Pixel Arena Debug v7</title>
     
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    
-    <!-- Socket.io твоего сервера -->
     <script src="/socket.io/socket.io.js"></script>
 
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Space+Mono:wght@400;700&display=swap');
-        body { background-color: #050505; color: white; font-family: 'Space Mono', monospace; overflow: hidden; margin: 0; }
-        
-        /* Жестко фиксируем размер игрового окна, чтобы не было черного экрана */
+        body { background: #000; color: #0f0; font-family: monospace; margin: 0; overflow: hidden; }
         #game-overlay { position: fixed; inset: 0; background: #000; z-index: 1000; display: none; flex-direction: column; }
-        #emulator-wrapper { width: 100%; height: 50vh !important; background: #000; position: relative; border-bottom: 2px solid #222; }
+        /* Принудительный размер контейнера */
+        #emulator-wrapper { width: 100vw; height: 50vh !important; background: #111; border-bottom: 2px solid #333; position: relative; }
         #game-container { width: 100% !important; height: 100% !important; }
         
-        .game-card { background: #111113; border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; }
-        .btn-p1 { background: #00f0ff; color: black; font-weight: 800; border-radius: 6px; }
-        .dpad-btn { width: 55px; height: 55px; background: #222; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; border: 1px solid #333; }
-        .action-btn { width: 60px; height: 60px; border-radius: 50%; font-weight: bold; font-size: 20px; display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 4px 0 rgba(0,0,0,0.5); }
+        #debug-console { 
+            position: absolute; top: 5px; left: 5px; 
+            font-size: 8px; color: #00ff00; pointer-events: none; z-index: 2000;
+            text-shadow: 1px 1px 1px #000;
+        }
+        .error-line { color: #ff4444; font-weight: bold; }
         
-        /* Окно ошибок */
-        #error-display { position: absolute; top: 0; left: 0; width: 100%; background: rgba(255,0,0,0.2); color: #ff4444; font-size: 10px; z-index: 9999; pointer-events: none; padding: 5px; }
+        .btn-p1 { background: #00f0ff; color: #000; font-weight: bold; padding: 10px; border-radius: 8px; }
+        .control-btn { width: 60px; height: 60px; background: #222; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; border: 1px solid #444; }
     </style>
 </head>
-<body class="flex flex-col h-screen">
+<body>
 
-    <div id="error-display"></div>
-
-    <header class="p-4 bg-zinc-950 flex justify-between items-center border-b border-white/5">
-        <h1 class="text-white font-bold text-xs uppercase italic">Arena<span class="text-[#00f0ff]">X</span></h1>
-        <div id="conn-status" class="text-[8px] text-yellow-500 font-bold uppercase">Connecting...</div>
-    </header>
-
-    <main class="flex-1 overflow-y-auto p-4 bg-black pb-24">
-        <div id="list-multi" class="space-y-4">
-            <!-- Кнопки игр -->
-            <div class="game-card p-4 flex justify-between items-center">
-                <h4 class="text-xs font-bold uppercase italic">Battletoads</h4>
-                <div class="flex gap-2">
-                    <button onclick="window.app.start('battletoads.md', 1)" class="btn-p1 px-4 py-2 text-[10px]">HOST LOBBY</button>
-                    <button onclick="window.app.join('battletoads.md')" class="bg-red-600 px-4 py-2 text-[10px] rounded font-bold">JOIN P2</button>
-                </div>
-            </div>
-            <div class="game-card p-4 flex justify-between items-center">
-                <h4 class="text-xs font-bold uppercase italic">Sonic</h4>
-                <button onclick="window.app.start('sonic.bin', 1)" class="btn-p1 px-4 py-2 text-[10px]">SOLO PLAY</button>
+    <!-- Главное меню -->
+    <div id="menu" class="p-6 space-y-6">
+        <h1 class="text-cyan-400 font-bold text-xl italic uppercase tracking-tighter">Arena Debug Mode</h1>
+        
+        <div class="bg-zinc-900 p-4 rounded-xl border border-zinc-800">
+            <h4 class="text-white font-bold mb-4">Battletoads Genesis</h4>
+            <div class="flex gap-4">
+                <button onclick="window.app.start('battletoads.md', 1)" class="btn-p1 flex-1">HOST ROOM</button>
+                <button onclick="window.app.join('battletoads.md')" class="bg-red-600 p-2 rounded text-xs font-bold text-white">JOIN P2</button>
             </div>
         </div>
-    </main>
-
-    <!-- МОДАЛКА ДЛЯ КОДА -->
-    <div id="join-modal" class="hidden fixed inset-0 bg-black/90 z-[5000] flex items-center justify-center p-6">
-        <div class="bg-zinc-900 p-6 rounded-2xl border border-[#00f0ff]/50 w-full max-w-xs text-center">
-            <h3 class="text-white font-bold mb-4 uppercase text-xs">Enter Host ID</h3>
-            <input id="lobby-input" type="text" class="w-full bg-black border border-white/20 p-3 rounded text-white text-center font-bold uppercase mb-4 outline-none" maxlength="4">
-            <button id="btn-submit-join" class="w-full bg-[#00f0ff] text-black font-black py-3 rounded">CONNECT</button>
-        </div>
+        <p class="text-[8px] text-zinc-500">Files found on GitHub: battletoads.md, sonic.bin</p>
     </div>
 
-    <!-- ИГРОВОЙ ЭКРАН -->
+    <!-- Игровой экран -->
     <div id="game-overlay">
-        <div class="h-10 bg-zinc-950 border-b border-primary/20 flex justify-between items-center px-4">
-            <span id="game-tag" class="text-[9px] font-bold text-[#00f0ff] uppercase">Initializing...</span>
-            <button onclick="location.reload()" class="text-zinc-500 text-[8px] font-bold uppercase">Quit</button>
+        <!-- Журнал событий прямо на экране -->
+        <div id="debug-console"></div>
+
+        <div class="h-10 bg-zinc-950 flex justify-between items-center px-4 border-b border-zinc-800">
+            <span id="room-id" class="text-[9px] text-cyan-400 font-bold">Waiting...</span>
+            <button onclick="location.reload()" class="text-zinc-600 text-[10px]">QUIT</button>
         </div>
+
         <div id="emulator-wrapper">
             <div id="game-container"></div>
         </div>
-        <div id="controller-wrapper" class="flex-1 bg-zinc-900 flex flex-col justify-center p-4">
-            <div class="flex justify-between items-center w-full max-w-md mx-auto">
-                <div class="grid grid-cols-3 gap-2">
-                    <div></div><button id="btn-up" class="dpad-btn">▲</button><div></div>
-                    <button id="btn-left" class="dpad-btn">◀</button>
-                    <div class="w-[50px] h-[50px] bg-black rounded-full border-2 border-zinc-800"></div>
-                    <button id="btn-right" class="dpad-btn">▶</button>
-                    <div></div><button id="btn-down" class="dpad-btn">▼</button><div></div>
-                </div>
-                <div class="flex flex-col gap-4">
-                    <button id="btn-a" class="action-btn bg-red-600">A</button>
-                    <button id="btn-start" class="bg-zinc-700 px-4 py-2 rounded text-[8px] font-bold">START</button>
-                </div>
+
+        <!-- Геймпад -->
+        <div id="controls" class="flex-1 bg-zinc-950 p-4 flex flex-col justify-around items-center">
+            <div class="grid grid-cols-3 gap-2">
+                <div></div><button id="up" class="control-btn text-white">▲</button><div></div>
+                <button id="left" class="control-btn text-white">◀</button>
+                <div class="w-14 h-14 bg-zinc-900 rounded-full border-4 border-zinc-800"></div>
+                <button id="right" class="control-btn text-white">▶</button>
+                <div></div><button id="down" class="control-btn text-white">▼</button><div></div>
+            </div>
+            <div class="flex gap-10">
+                <button id="btn-a" class="w-16 h-16 bg-red-600 rounded-full font-bold text-white shadow-lg active:scale-90">A</button>
+                <button id="start" class="bg-zinc-700 px-6 py-2 rounded font-bold text-[10px] uppercase">START</button>
             </div>
         </div>
     </div>
 
     <script>
-        // Функция ошибки для тебя
-        function reportError(msg) {
-            document.getElementById('error-display').innerText = "SYSTEM ERROR: " + msg;
-            console.error(msg);
+        const debug = document.getElementById('debug-console');
+        function log(msg, isError = false) {
+            const line = document.createElement('div');
+            line.className = isError ? 'error-line' : '';
+            line.innerText = `> ${msg}`;
+            debug.appendChild(line);
+            console.log(msg);
         }
+
+        // Перехват всех ошибок браузера
+        window.onerror = (m) => log(`RUNTIME ERROR: ${m}`, true);
 
         (function() {
             const socket = io();
-            let currentRoom = null;
-            let playerNum = 1;
-            
-            const mapP1 = { UP: "ArrowUp", DOWN: "ArrowDown", LEFT: "ArrowLeft", RIGHT: "ArrowRight", A: "KeyX", START: "Enter" };
-            const mapP2 = { UP: "KeyW", DOWN: "KeyS", LEFT: "KeyA", RIGHT: "KeyD", A: "KeyJ", START: "Space" };
+            let room = null;
+            let myPlayerNum = 1;
 
-            socket.on('connect', () => {
-                document.getElementById('conn-status').innerText = "Online";
-            });
+            socket.on('connect', () => log("Socket connected to Render."));
 
             window.app = {
                 start: function(rom, pNum) {
-                    playerNum = pNum;
-                    currentRoom = Math.random().toString(36).substring(2, 6).toUpperCase();
-                    socket.emit('createRoom', currentRoom);
+                    myPlayerNum = pNum;
+                    room = Math.random().toString(36).substring(2, 6).toUpperCase();
+                    socket.emit('createRoom', room);
+                    document.getElementById('menu').style.display = 'none';
                     document.getElementById('game-overlay').style.display = 'flex';
-                    document.getElementById('game-tag').innerText = "Host ID: " + currentRoom;
+                    document.getElementById('room-id').innerText = `ROOM: ${room}`;
+                    log(`Creating room ${room}...`);
                     this.load(rom);
                 },
-                join: function(rom) {
-                    document.getElementById('join-modal').classList.remove('hidden');
-                    document.getElementById('btn-submit-join').onclick = () => {
-                        const code = document.getElementById('lobby-input').value.toUpperCase();
-                        currentRoom = code;
-                        playerNum = 2;
-                        socket.emit('joinRoom', currentRoom);
-                        document.getElementById('join-modal').classList.add('hidden');
-                        document.getElementById('game-overlay').style.display = 'flex';
-                        document.getElementById('game-tag').innerText = "Connected P2";
-                        this.load(rom);
-                    };
-                },
                 load: function(romFile) {
-                    try {
-                        window.EJS_player = '#game-container';
-                        window.EJS_core = 'sega';
-                        // Используем ПОЛНЫЙ URL, чтобы Telegram не потерял файл
-                        window.EJS_gameUrl = window.location.origin + '/' + romFile;
-                        window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
-                        window.EJS_startOnLoaded = true;
+                    log(`Loading ROM: ${romFile}`);
+                    
+                    window.EJS_player = '#game-container';
+                    window.EJS_core = 'sega';
+                    // Прямой путь к файлу на твоем сервере
+                    window.EJS_gameUrl = window.location.origin + '/' + romFile;
+                    window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
+                    window.EJS_startOnLoaded = true;
 
-                        const s = document.createElement('script');
-                        s.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
-                        s.onerror = () => reportError("Failed to load emulator core from CDN");
-                        document.body.appendChild(s);
-                    } catch (e) { reportError(e.message); }
+                    const script = document.createElement('script');
+                    script.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
+                    
+                    script.onload = () => log("Engine loader.js is READY.");
+                    script.onerror = () => log("CDN ERROR: Could not download core!", true);
+                    
+                    document.body.appendChild(script);
+
+                    // Проверка, видит ли браузер файл игры
+                    fetch(window.EJS_gameUrl).then(res => {
+                        if(res.ok) log("OK: Game file found on server.");
+                        else log("ERROR 404: Game file not found!", true);
+                    }).catch(e => log(`NET ERROR: ${e.message}`, true));
                 }
             };
 
-            // Синхронизация
-            socket.on('inputSync', (data) => {
-                const map = (data.player === 1) ? mapP1 : mapP2;
-                fire(map[data.btn], data.state);
-            });
-
-            function fire(code, isDown) {
+            // Логика нажатий
+            function fireKey(code, isDown) {
                 const canvas = document.querySelector('canvas');
+                const event = new KeyboardEvent(isDown ? 'keydown' : 'keyup', { code: code, bubbles: true });
+                document.dispatchEvent(event);
                 if (canvas) {
                     canvas.focus();
-                    canvas.dispatchEvent(new KeyboardEvent(isDown ? 'keydown' : 'keyup', { code: code, bubbles: true }));
+                    canvas.dispatchEvent(event);
                 }
             }
 
-            function bind(id, btnName) {
+            function bind(id, key) {
                 const el = document.getElementById(id);
-                const handle = (isDown) => {
-                    const myMap = (playerNum === 1) ? mapP1 : mapP2;
-                    fire(myMap[btnName], isDown);
-                    if(currentRoom) socket.emit('inputSync', { roomId: currentRoom, player: playerNum, btn: btnName, state: isDown });
+                el.onpointerdown = () => {
+                    fire(key, true);
+                    if (window.Telegram && window.Telegram.WebApp) window.Telegram.WebApp.HapticFeedback.impactOccurred('medium');
                 };
-                el.onpointerdown = () => handle(true);
-                el.onpointerup = () => handle(false);
+                el.onpointerup = () => fire(key, false);
             }
-            bind('btn-up', 'UP'); bind('btn-down', 'DOWN'); bind('btn-left', 'LEFT'); bind('btn-right', 'RIGHT');
-            bind('btn-a', 'A'); bind('btn-start', 'START');
+
+            function fire(key, isDown) {
+                const codes = { UP: "ArrowUp", DOWN: "ArrowDown", LEFT: "ArrowLeft", RIGHT: "ArrowRight", A: "KeyX", START: "Enter" };
+                fireKey(codes[key], isDown);
+                if(room) socket.emit('inputSync', { roomId: room, player: myPlayerNum, btn: key, state: isDown });
+            }
+
+            bind('up', 'UP'); bind('down', 'DOWN'); bind('left', 'LEFT'); bind('right', 'RIGHT');
+            bind('btn-a', 'A'); bind('start', 'START');
+
+            socket.on('inputSync', (data) => {
+                if(data.player !== myPlayerNum) {
+                    const codes = { UP: "ArrowUp", DOWN: "ArrowDown", LEFT: "ArrowLeft", RIGHT: "ArrowRight", A: "KeyX", START: "Enter" };
+                    fireKey(codes[data.btn], data.state);
+                }
+            });
         })();
     </script>
 </body>
