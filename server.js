@@ -12,36 +12,40 @@ const io = socketIo(server, {
     }
 });
 
-const PORT = process.env.PORT || 3001; // Render.com compatibility
+const PORT = process.env.PORT || 3001;
 
-// Middleware
 app.use(cors());
 app.use(express.static('public'));
 
-// Health check endpoint for Render.com
 app.get('/health', (req, res) => {
     res.status(200).send('OK');
 });
 
-// Socket.io logic
-let playerCount = 0;
-
 io.on('connection', (socket) => {
-    playerCount++;
-    console.log(`Player connected: ${socket.id}. Total players: ${playerCount}`);
-    
-    // Send current player count
-    io.emit('playerCount', playerCount);
-    
-    socket.on('playerUpdate', (data) => {
-        // Broadcast to other players
-        socket.broadcast.emit('playerUpdate', data);
+    console.log(`Игрок подключился: ${socket.id}`);
+
+    // 1. Создание лобби (Хост)
+    socket.on('createRoom', (roomId) => {
+        socket.join(roomId);
+        console.log(`Лобби создано: ${roomId}`);
     });
-    
+
+    // 2. Подключение Игрока 2
+    socket.on('joinRoom', (roomId) => {
+        socket.join(roomId);
+        console.log(`Игрок зашел в лобби: ${roomId}`);
+        // Говорим хосту, что P2 готов
+        socket.to(roomId).emit('peerConnected');
+    });
+
+    // 3. Синхронизация кнопок (Netplay)
+    socket.on('inputSync', (data) => {
+        // Пересылаем нажатие всем в комнате, кроме отправителя
+        socket.to(data.roomId).emit('inputSync', data);
+    });
+
     socket.on('disconnect', () => {
-        playerCount--;
-        console.log(`Player disconnected: ${socket.id}. Total players: ${playerCount}`);
-        io.emit('playerCount', playerCount);
+        console.log(`Игрок отключился: ${socket.id}`);
     });
 });
 
