@@ -1,26 +1,51 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <script src="https://cdn.emulatorjs.org/stable/data/loader.js"></script>
-    <style>body { margin: 0; background: black; }</style>
+    <meta charset="UTF-8">
+    <title>Pixel Kombat Arena</title>
+    <!-- ЭТОТ СКРИПТ ПОДКЛЮЧАЕТ ВСЁ НЕОБХОДИМОЕ -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/loader.js"></script>
+    <style>
+        body { margin: 0; background: #000; color: white; display: flex; flex-direction: column; height: 100vh; }
+        #game-container { flex: 1; width: 100%; }
+        .controls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 20px; background: #111; }
+        .btn { background: #222; padding: 20px; text-align: center; border-radius: 8px; border: 1px solid #444; }
+    </style>
 </head>
 <body>
-    <div id="game"></div>
-    <script>
-        // Твоя строка Base64 (вставь её вместо многоточия)
-        const romBase64 = "ЗДЕСЬ_ДОЛЖНА_БЫТЬ_ТВОЯ_ОГРОМНАЯ_BASE64_СТРОКА"; 
 
-        window.EJS_player = "#game";
+    <div id="game-container"></div>
+    
+    <div class="controls">
+        <button class="btn" onpointerdown="send('UP')" onpointerup="send('UP_UP')">UP</button>
+        <button class="btn" onpointerdown="send('A')" onpointerup="send('A_UP')">A</button>
+        <button class="btn" onpointerdown="send('START')" onpointerup="send('START_UP')">START</button>
+    </div>
+
+    <script>
+        // Инициализация эмулятора
+        window.EJS_player = "#game-container";
         window.EJS_core = "sega";
-        window.EJS_pathtodata = "https://cdn.emulatorjs.org/stable/data/";
-        
-        // Превращаем Base64 обратно в бинарные данные для эмулятора
-        fetch('data:application/octet-stream;base64,' + romBase64)
-            .then(res => res.blob())
-            .then(blob => {
-                window.EJS_gameUrl = URL.createObjectURL(blob);
-                window.EJS_startOnLoaded = true;
-            });
+        window.EJS_gameUrl = "/battletoads.md"; // СТРОГО ПО ИМЕНИ ФАЙЛА
+        window.EJS_pathtodata = "/data/";
+        window.EJS_startOnLoaded = true;
+
+        const socket = io();
+
+        function send(action) {
+            socket.emit('input', { action });
+            // Имитация нажатия для самого эмулятора
+            const keyMap = { 'UP': 'ArrowUp', 'A': 'KeyX', 'START': 'Enter' };
+            if(keyMap[action]) {
+                window.dispatchEvent(new KeyboardEvent('keydown', { code: keyMap[action] }));
+            }
+        }
+
+        socket.on('input', (data) => {
+            const keyMap = { 'UP': 'ArrowUp', 'A': 'KeyX', 'START': 'Enter' };
+            window.dispatchEvent(new KeyboardEvent('keydown', { code: keyMap[data.action] }));
+        });
     </script>
 </body>
 </html>
