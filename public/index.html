@@ -2,29 +2,26 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>DEBUG V9</title>
-    <style>
-        body { background: #000; color: #fff; font-family: monospace; padding: 10px; font-size: 12px; }
-        .err { color: #ff0000; }
-        .ok { color: #00ff00; }
-    </style>
+    <title>Pixel Arena</title>
+    <style>body { margin: 0; background: #000; }</style>
 </head>
 <body>
-    <div id="log">Запуск проверки...</div>
+    <div id="game-container"></div>
     <script>
-        const log = (m, isErr) => document.getElementById('log').innerHTML += `<div class="${isErr ? 'err' : 'ok'}">${m}</div>`;
+        // Инициализация эмулятора из официального облака
+        window.EJS_player = '#game-container';
+        window.EJS_core = 'sega';
         
-        async function check() {
-            const files = ['/loader.js', '/battletoads.md', '/data/'];
-            for(let f of files) {
-                try {
-                    const res = await fetch(f);
-                    if(res.ok) log("✅ Файл найден: " + f);
-                    else log("❌ ОШИБКА 404: " + f, true);
-                } catch(e) { log("❌ ОШИБКА СЕТИ: " + f, true); }
-            }
-        }
-        check();
+        // ССЫЛКА НА ТВОЙ ФАЙЛ (Берем напрямую с Гитхаба, чтобы Render не блокировал)
+        window.EJS_gameUrl = 'https://raw.githubusercontent.com/klimsporyshevklim-collab/Retrosega/main/public/battletoads.md';
+        
+        // Путь к ядру из официального облака
+        window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
+        window.EJS_startOnLoaded = true;
+        
+        const s = document.createElement('script');
+        s.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
+        document.body.appendChild(s);
     </script>
 </body>
 </html>
