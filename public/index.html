@@ -1,27 +1,77 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Pixel Arena</title>
-    <style>body { margin: 0; background: #000; }</style>
+    <style>
+        body { margin: 0; background: #000; overflow: hidden; font-family: sans-serif; }
+        #game-container { width: 100vw; height: 60vh; }
+        
+        /* Панель управления */
+        .controls { 
+            height: 40vh; 
+            display: grid; 
+            grid-template-columns: repeat(3, 1fr); 
+            gap: 10px; 
+            padding: 20px; 
+            background: #111; 
+            align-items: center; 
+        }
+        .btn { 
+            background: #333; 
+            color: white; 
+            padding: 20px; 
+            border-radius: 50%; 
+            width: 70px; 
+            height: 70px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            font-weight: bold; 
+            border: 1px solid #555;
+        }
+        .btn:active { background: #00f0ff; color: #000; }
+    </style>
 </head>
 <body>
+
     <div id="game-container"></div>
+    
+    <div class="controls">
+        <button class="btn" onpointerdown="send('ArrowUp', true)" onpointerup="send('ArrowUp', false)">UP</button>
+        <button class="btn" onpointerdown="send('KeyX', true)" onpointerup="send('KeyX', false)">A</button>
+        <button class="btn" onpointerdown="send('Enter', true)" onpointerup="send('Enter', false)">START</button>
+    </div>
+
     <script>
-        // Инициализация эмулятора из официального облака
+        // Инициализация
         window.EJS_player = '#game-container';
         window.EJS_core = 'sega';
-        
-        // ССЫЛКА НА ТВОЙ ФАЙЛ (Берем напрямую с Гитхаба, чтобы Render не блокировал)
-        window.EJS_gameUrl = 'https://raw.githubusercontent.com/klimsporyshevklim-collab/Retrosega/main/public/battletoads.md';
-        
-        // Путь к ядру из официального облака
+        // Убедись, что файл на GitHub называется battletoads.md
+        window.EJS_gameUrl = '/battletoads.md'; 
         window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
         window.EJS_startOnLoaded = true;
-        
+
         const s = document.createElement('script');
         s.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
         document.body.appendChild(s);
+
+        // Функция отправки нажатий напрямую в canvas
+        function send(code, isDown) {
+            const canvas = document.querySelector('canvas');
+            if (canvas) {
+                canvas.focus(); // КРИТИЧЕСКИ ВАЖНО: фокус на игру
+                const event = new KeyboardEvent(isDown ? 'keydown' : 'keyup', {
+                    code: code,
+                    key: code,
+                    bubbles: true,
+                    cancelable: true
+                });
+                canvas.dispatchEvent(event);
+                document.dispatchEvent(event);
+            }
+        }
     </script>
 </body>
 </html>
