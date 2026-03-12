@@ -1,6 +1,7 @@
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
+
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, { cors: { origin: "*" } });
@@ -12,37 +13,36 @@ const rooms = {};
 io.on('connection', (socket) => {
     console.log('User connected:', socket.id);
 
-    // Хост создает комнату
     socket.on('createRoom', (roomId) => {
         socket.join(roomId);
-        rooms[roomId] = { host: socket.id, guest: null };
-        console.log(`Room created: ${roomId} by ${socket.id}`);
+        // readyCount - счетчик загрузившихся игроков
+        rooms[roomId] = { host: socket.id, guest: null, readyCount: 0 };
     });
 
-    // Гость входит в комнату
     socket.on('joinRoom', (roomId) => {
         if (rooms[roomId] && !rooms[roomId].guest) {
             socket.join(roomId);
             rooms[roomId].guest = socket.id;
-            console.log(`Guest ${socket.id} joined room: ${roomId}`);
-            
-            // Даем команду СТАРТ обоим игрокам в этой комнате
-            io.to(roomId).emit('syncStart', { roomId });
-        } else {
-            socket.emit('systemError', 'Комната не найдена или заполнена');
+            // Говорим обоим: "Начинайте скачивать игру"
+            io.to(roomId).emit('startDownload'); 
         }
     });
 
-    // Трансляция кнопок
-    socket.on('inputSync', (data) => {
-        // Пересылаем нажатие всем в комнате, кроме того кто нажал
-        socket.to(data.roomId).emit('inputSync', data);
+    // Игрок сообщает, что скачал игру и готов
+    socket.on('playerReady', (roomId) => {
+        if (rooms[roomId]) {
+            rooms[roomId].readyCount++;
+            // Если оба скачали - даем команду на одновременный старт ядра
+            if (rooms[roomId].readyCount === 2) {
+                io.to(roomId).emit('bootEngine');
+            }
+        }
     });
 
-    socket.on('disconnect', () => {
-        console.log('User disconnected');
+    socket.on('inputSync', (data) => {
+        socket.to(data.roomId).emit('inputSync', data);
     });
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Server is live on port ${PORT}`));
+server.listen(PORT, () => console.log(`Server is running on ${PORT}`));
