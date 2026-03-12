@@ -2,61 +2,76 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Pixel Arena - Native Netplay</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Pixel Arena - True Netplay</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { margin: 0; background: #000; color: #fff; font-family: monospace; overflow: hidden; }
-        #menu { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: #09090b; padding: 20px; }
+        body { margin: 0; background: #09090b; color: #fff; font-family: monospace; overflow: hidden; }
+        #menu { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; padding: 20px; }
         #game-overlay { display: none; width: 100vw; height: 100vh; background: #000; }
         #game-container { width: 100%; height: 100%; }
     </style>
 </head>
 <body>
 
-    <!-- Наше стартовое меню -->
     <div id="menu">
         <h1 class="text-cyan-400 text-4xl font-black italic mb-8 uppercase tracking-tighter">Pixel Arena</h1>
+        
         <div class="bg-zinc-900 p-8 rounded-3xl border border-zinc-800 text-center shadow-2xl w-full max-w-sm">
             <div class="text-6xl mb-6">🐸</div>
-            <h2 class="text-2xl font-bold mb-8 uppercase">Battletoads</h2>
-            <button onclick="launchSega()" class="bg-cyan-500 text-black px-8 py-4 rounded-xl font-black uppercase w-full shadow-lg active:scale-95 transition-transform">
-                ЗАПУСТИТЬ СИСТЕМУ
+            <h2 class="text-white text-2xl font-bold mb-2 uppercase">Battletoads</h2>
+            <p class="text-zinc-500 text-[10px] mb-8 uppercase">Для мультиплеера нужен внешний браузер</p>
+            
+            <button onclick="launchExternal()" class="bg-cyan-500 text-black px-8 py-4 rounded-xl font-black uppercase w-full shadow-lg mb-4">
+                ИГРАТЬ (ОТКРЫТЬ В БРАУЗЕРЕ)
             </button>
-            <p class="text-zinc-500 text-[10px] mt-4 uppercase">Мультиплеер настраивается внутри эмулятора</p>
+            
+            <button onclick="launchInternal()" class="bg-zinc-800 text-white px-8 py-3 rounded-xl font-bold uppercase w-full text-xs">
+                Тест внутри Telegram
+            </button>
         </div>
     </div>
 
-    <!-- Контейнер для родного Эмулятора -->
     <div id="game-overlay">
         <div id="game-container"></div>
     </div>
 
     <script>
-        function launchSega() {
-            // Скрываем меню, показываем эмулятор
+        // Функция 1: Побег из Телеграма (для реального мультиплеера)
+        function launchExternal() {
+            const gameUrl = window.location.origin + '?play=true';
+            if (window.Telegram && window.Telegram.WebApp) {
+                window.Telegram.WebApp.openLink(gameUrl);
+            } else {
+                window.location.href = gameUrl;
+            }
+        }
+
+        // Функция 2: Запуск самого эмулятора
+        function launchInternal() {
             document.getElementById('menu').style.display = 'none';
             document.getElementById('game-overlay').style.display = 'block';
 
-            // Настройки официального движка
             window.EJS_player = '#game-container';
             window.EJS_core = 'sega';
-            
-            // Прямая ссылка на твой ROM
             window.EJS_gameUrl = 'https://raw.githubusercontent.com/klimsporyshevklim-collab/Retrosega/main/public/battletoads.bin';
             window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
-            
             window.EJS_startOnLoaded = true;
-            
-            // ВКЛЮЧАЕМ РОДНОЙ МОБИЛЬНЫЙ ДЖОЙСТИК ЭМУЛЯТОРА
-            window.EJS_VirtualGamepad = true; 
+            window.EJS_VirtualGamepad = true; // Включаем родной джойстик
 
-            // Загружаем ядро
             const script = document.createElement('script');
             script.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
             document.body.appendChild(script);
         }
+
+        // Автозапуск, если открыли во внешнем браузере
+        window.onload = () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('play') === 'true') {
+                launchInternal();
+            }
+        };
     </script>
 </body>
 </html>
