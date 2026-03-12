@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Pixel Arena Elite</title>
+    <title>Pixel Arena Final</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="/socket.io/socket.io.js"></script>
@@ -12,9 +12,9 @@
         #game-overlay { position: fixed; inset: 0; background: #000; z-index: 1000; display: none; flex-direction: column; }
         #emulator-wrapper { width: 100vw; height: 50vh !important; background: #000; position: relative; }
         #game-container { width: 100% !important; height: 100% !important; }
-        .ctrl-btn { width: 65px; height: 65px; background: #1a1a1a; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; border: 2px solid #333; color: #0f0; touch-action: none; }
+        .ctrl-btn { width: 65px; height: 65px; background: #1a1a1a; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; border: 2px solid #333; touch-action: none; color: #0f0; }
         .ctrl-btn:active { background: #00f0ff; color: #000; transform: scale(0.9); }
-        #status-bar { position: fixed; top: 0; left: 0; width: 100%; background: rgba(0,255,0,0.1); color: #0f0; font-size: 8px; padding: 4px; z-index: 10001; text-align: center; }
+        #status-bar { position: fixed; top: 0; left: 0; width: 100%; background: rgba(0,255,0,0.2); color: #0f0; font-size: 8px; padding: 4px; z-index: 10001; pointer-events: none; text-align: center; border-bottom: 1px solid #0f0; }
     </style>
 </head>
 <body class="flex flex-col h-screen">
@@ -25,8 +25,8 @@
         <h1 class="text-cyan-500 text-3xl font-black italic uppercase text-center tracking-tighter">PIXEL ARENA</h1>
         <div class="bg-zinc-900 p-8 rounded-3xl border border-zinc-800 w-full max-w-sm text-center shadow-2xl">
             <div class="text-6xl mb-4">🐸</div>
-            <h4 class="text-white font-bold uppercase text-lg mb-6 tracking-widest">Battletoads</h4>
-            <button onclick="app.loadGame('battletoads.bin')" class="bg-cyan-500 text-black font-black py-4 rounded-2xl w-full uppercase shadow-lg active:scale-95 transition-all">
+            <h4 class="text-white font-bold uppercase text-lg mb-6">Battletoads</h4>
+            <button id="start-btn" onclick="app.loadGame('battletoads.bin')" class="bg-cyan-500 text-black font-black py-4 rounded-2xl w-full uppercase shadow-lg shadow-cyan-500/20 active:scale-95 transition-all">
                 ЗАПУСТИТЬ ИГРУ
             </button>
         </div>
@@ -34,12 +34,17 @@
 
     <div id="game-overlay">
         <div class="h-10 bg-zinc-950 border-b border-cyan-900/50 flex justify-between items-center px-4">
-            <span class="text-[9px] font-bold text-white uppercase tracking-widest">Live Session</span>
-            <button onclick="location.reload()" class="bg-red-900/20 text-red-500 text-[8px] px-3 py-1 rounded-full font-bold uppercase border border-red-900/50">Выход</button>
+            <div class="flex items-center gap-2">
+                <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_8px_#22c55e]"></div>
+                <span id="game-tag" class="text-[10px] font-bold text-white uppercase">Live Session</span>
+            </div>
+            <button onclick="location.reload()" class="bg-red-900/20 text-red-500 text-[8px] px-3 py-1 rounded-full font-bold uppercase border border-red-900/50">ВЫХОД</button>
         </div>
+
         <div id="emulator-wrapper">
             <div id="game-container"></div>
         </div>
+
         <div class="flex-1 bg-zinc-950 p-4 flex flex-col justify-around">
             <div class="flex justify-between items-center w-full max-w-sm mx-auto">
                 <div class="grid grid-cols-3 gap-2">
@@ -51,7 +56,7 @@
                 </div>
                 <div class="flex flex-col gap-6 items-center">
                     <button class="ctrl-btn bg-red-600 border-red-400 text-white font-bold text-2xl shadow-lg" id="btn-a">A</button>
-                    <button class="bg-zinc-800 py-3 px-8 rounded-2xl text-[10px] font-bold text-white border border-zinc-700 uppercase tracking-widest" id="btn-start">Start</button>
+                    <button class="bg-zinc-800 py-2 px-4 rounded-2xl text-[10px] font-bold text-white border border-zinc-700 uppercase tracking-widest" id="btn-start">Start</button>
                 </div>
             </div>
         </div>
@@ -59,29 +64,41 @@
 
     <script>
         const logBar = document.getElementById('status-bar');
-        function log(m) { logBar.innerText = "> " + m; }
+        function log(m) { logBar.innerText = "Система: " + m; }
 
         window.app = {
             loadGame: async function(romFile) {
-                document.getElementById('menu').style.display = 'none';
-                document.getElementById('game-overlay').style.display = 'flex';
-                log("Инициализация эмулятора...");
-
+                log("Подготовка файла...");
+                document.getElementById('start-btn').disabled = true;
+                
                 try {
-                    // Прямой путь к твоему серверу Render
+                    // Сами скачиваем файл через fetch
+                    const response = await fetch(window.location.origin + '/' + romFile);
+                    if (!response.ok) throw new Error("Файл не найден. Проверь регистр букв!");
+                    
+                    const blob = await response.blob();
+                    log("Файл скачан (" + blob.size + " байт). Запуск эмулятора...");
+
+                    // Показываем игру
+                    document.getElementById('menu').style.display = 'none';
+                    document.getElementById('game-overlay').style.display = 'flex';
+
+                    // Настройка EmulatorJS
                     window.EJS_player = '#game-container';
                     window.EJS_core = 'sega';
-                    window.EJS_gameUrl = window.location.origin + '/' + romFile;
+                    window.EJS_gameUrl = URL.createObjectURL(blob); // Передаем скачанный файл напрямую
                     window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
                     window.EJS_startOnLoaded = true;
 
                     const s = document.createElement('script');
                     s.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
-                    s.onload = () => log("Эмулятор запущен. Жми START");
-                    s.onerror = () => log("Ошибка загрузки Loader.js");
+                    s.onload = () => log("Эмулятор запущен! Подожди 5 сек и жми START");
                     document.body.appendChild(s);
 
-                } catch (e) { log("ОШИБКА: " + e.message); }
+                } catch (e) {
+                    log("ОШИБКА: " + e.message);
+                    document.getElementById('start-btn').disabled = false;
+                }
             }
         };
 
@@ -96,7 +113,10 @@
 
         function bind(id, k) {
             const el = document.getElementById(id);
-            el.onpointerdown = (e) => { e.preventDefault(); fireKey(k, true); if(window.Telegram) Telegram.WebApp.HapticFeedback.impactOccurred('medium'); };
+            el.onpointerdown = (e) => { 
+                e.preventDefault(); fireKey(k, true); 
+                if(window.Telegram) Telegram.WebApp.HapticFeedback.impactOccurred('medium'); 
+            };
             el.onpointerup = (e) => { e.preventDefault(); fireKey(k, false); };
         }
         
