@@ -11,42 +11,39 @@ const io = socketIo(server, {
 
 app.use(express.static('public'));
 
-// Хранилище активных комнат
 const rooms = {};
 
 io.on('connection', (socket) => {
-    console.log('Новое подключение:', socket.id);
+    console.log('User connected:', socket.id);
 
-    // Создание комнаты
     socket.on('createRoom', (roomId) => {
         socket.join(roomId);
         rooms[roomId] = { host: socket.id, guest: null };
-        console.log(`Комната создана: ${roomId}`);
+        console.log('Room created:', roomId);
     });
 
-    // Вход в комнату
     socket.on('joinRoom', (roomId) => {
-        if (rooms[roomId]) {
+        if (rooms[roomId] && !rooms[roomId].guest) {
             socket.join(roomId);
             rooms[roomId].guest = socket.id;
-            // Уведомляем обоих, что игра началась
-            io.to(roomId).emit('gameStart');
-            console.log(`Игрок 2 зашел в комнату: ${roomId}`);
+            // ВАЖНО: Даем команду обоим игрокам запустить эмулятор одновременно
+            io.to(roomId).emit('syncStart');
+            console.log('Guest joined, starting sync...');
         } else {
-            socket.emit('error', 'Комната не найдена');
+            socket.emit('error', 'Room full or not found');
         }
     });
 
-    // Передача нажатий кнопок
     socket.on('inputSync', (data) => {
-        // Пересылаем нажатие всем в этой комнате, кроме отправителя
+        // Прокидываем нажатие кнопки второму игроку в комнате
         socket.to(data.roomId).emit('inputSync', data);
     });
 
     socket.on('disconnect', () => {
-        console.log('Игрок отключился');
+        // Очистка комнат при дисконнекте (упрощенно)
+        console.log('User disconnected');
     });
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Сервер запущен на порту ${PORT}`));
+server.listen(PORT, () => console.log(`Server on port ${PORT}`));
