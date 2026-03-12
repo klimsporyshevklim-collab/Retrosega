@@ -1,8 +1,6 @@
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
-const path = require('path');
-
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, { cors: { origin: "*" } });
@@ -14,23 +12,30 @@ const rooms = {};
 io.on('connection', (socket) => {
     socket.on('createRoom', (roomId) => {
         socket.join(roomId);
-        rooms[roomId] = { host: socket.id, guest: null };
+        rooms[roomId] = { host: socket.id, guest: null, hostReady: false, guestReady: false };
     });
 
     socket.on('joinRoom', (roomId) => {
         if (rooms[roomId]) {
             socket.join(roomId);
             rooms[roomId].guest = socket.id;
-            io.to(roomId).emit('syncStart'); // Запуск у обоих
+            io.to(roomId).emit('waitingForReady');
+        }
+    });
+
+    socket.on('playerReady', (roomId) => {
+        if (!rooms[roomId]) return;
+        if (socket.id === rooms[roomId].host) rooms[roomId].hostReady = true;
+        else rooms[roomId].guestReady = true;
+
+        if (rooms[roomId].hostReady && rooms[roomId].guestReady) {
+            io.to(roomId).emit('syncStart'); // СТАРТ ОДНОВРЕМЕННО
         }
     });
 
     socket.on('inputSync', (data) => {
-        // Передаем нажатие всем в комнате (включая себя для проверки или только другому)
         socket.to(data.roomId).emit('inputSync', data);
     });
-
-    socket.on('disconnect', () => { /* Логика выхода */ });
 });
 
 const PORT = process.env.PORT || 3000;
