@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Pixel Arena - Pro Tournament</title>
+    <title>Pixel Arena - Perfect Sync</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="/socket.io/socket.io.js"></script>
@@ -11,61 +11,49 @@
         body { background: #000; color: #fff; font-family: monospace; overflow: hidden; margin: 0; }
         .screen { position: absolute; inset: 0; display: none; flex-direction: column; background: #09090b; z-index: 10; }
         .screen.active { display: flex; }
-        
         #emulator-wrapper { width: 100vw; height: 50vh; background: #000; position: relative; border-bottom: 2px solid #222; }
         #game-container { width: 100% !important; height: 100% !important; }
-        
         .ctrl-btn { width: 60px; height: 60px; background: #1a1a1a; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; border: 2px solid #333; touch-action: none; color: #0f0; }
         .ctrl-btn:active { background: #00f0ff; color: #000; transform: scale(0.9); }
     </style>
 </head>
 <body>
 
-    <!-- 1. МЕНЮ ВНУТРИ TELEGRAM -->
-    <div id="screen-tg-menu" class="screen p-6 justify-center items-center space-y-8">
+    <!-- 1. МЕНЮ -->
+    <div id="screen-menu" class="screen active p-6 justify-center items-center space-y-8">
         <h1 class="text-cyan-500 text-4xl font-black italic uppercase tracking-tighter">PIXEL ARENA</h1>
-        <div class="bg-zinc-900 p-8 rounded-3xl border border-zinc-800 w-full max-w-sm text-center shadow-2xl">
-            <div class="text-6xl mb-6">🐸</div>
-            <h4 class="text-white font-bold uppercase text-lg mb-6">Battletoads</h4>
-            <div class="space-y-4">
-                <button onclick="app.launchSolo()" class="bg-zinc-800 text-white font-bold py-4 rounded-xl w-full uppercase text-xs border border-zinc-700">Одиночная игра (ТГ)</button>
-                <button onclick="app.goExternal()" class="bg-cyan-500 text-black font-black py-4 rounded-xl w-full uppercase shadow-lg shadow-cyan-500/20">Сетевой Турнир (PVP)</button>
+        <div class="bg-zinc-900 p-8 rounded-3xl border border-zinc-800 w-full max-w-sm text-center shadow-2xl space-y-6">
+            <div class="text-6xl">🐸</div>
+            <h4 class="text-white font-bold uppercase text-lg">Battletoads</h4>
+            <div class="flex flex-col gap-3">
+                <button onclick="app.launchSolo()" class="bg-zinc-800 text-white font-bold py-4 rounded-xl w-full uppercase text-xs">Одиночная игра</button>
+                <button onclick="app.createRoom()" class="bg-cyan-500 text-black font-black py-4 rounded-xl w-full uppercase text-xs shadow-lg shadow-cyan-500/20">Создать Лобби</button>
+                <button onclick="app.showJoin()" class="bg-transparent border border-red-600 text-red-500 font-bold py-4 rounded-xl w-full uppercase text-xs">Войти по ID</button>
             </div>
         </div>
     </div>
 
-    <!-- 2. МЕНЮ ТУРНИРА (ВО ВНЕШНЕМ БРАУЗЕРЕ) -->
-    <div id="screen-mp-lobby" class="screen p-6 justify-center items-center space-y-8">
-        <h1 class="text-cyan-500 text-2xl font-black uppercase tracking-widest border-b-2 border-cyan-500 pb-2">ТУРНИРНОЕ ЛОББИ</h1>
-        <div class="bg-zinc-900 p-8 rounded-3xl border border-cyan-900/50 w-full max-w-sm text-center shadow-2xl">
-            <div class="flex gap-2">
-                <button onclick="app.createRoom()" class="bg-cyan-500 text-black font-black py-5 rounded-xl flex-1 text-[10px] uppercase">Создать Лобби</button>
-                <button onclick="app.showJoin()" class="bg-red-600 font-bold py-5 rounded-xl flex-1 text-[10px] uppercase text-white">Войти по ID</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- 3. ОКНО ОЖИДАНИЯ (ДЛЯ ХОСТА) -->
-    <div id="screen-wait" class="screen p-6 justify-center items-center text-center bg-black/95 z-50">
-        <div class="text-cyan-400 text-lg animate-pulse mb-6 font-bold uppercase">Ждем соперника...</div>
-        <p class="text-zinc-500 text-[10px] mb-2 uppercase">Продиктуй этот код другу:</p>
-        <div id="room-code" class="text-5xl font-black text-white bg-zinc-900 py-6 px-10 rounded-2xl tracking-[0.2em] border border-zinc-800">----</div>
-    </div>
-
-    <!-- 4. ОКНО ВВОДА КОДА (ДЛЯ P2) -->
-    <div id="screen-join" class="screen p-6 justify-center items-center text-center bg-black/95 z-50">
+    <!-- 2. ЭКРАН ВВОДА КОДА -->
+    <div id="screen-join" class="screen p-6 justify-center items-center text-center">
         <div class="bg-zinc-900 p-8 rounded-3xl border border-red-500 w-full max-w-sm">
             <h3 class="text-white font-bold mb-4 uppercase text-sm">Вход в Турнир</h3>
             <input id="join-input" type="text" class="w-full bg-black border border-zinc-700 p-4 rounded-xl text-center font-black text-3xl uppercase text-cyan-400 mb-6 outline-none" maxlength="4" placeholder="КОД">
-            <button onclick="app.joinRoom()" class="w-full bg-cyan-500 text-black font-black py-4 rounded-xl uppercase text-xs">Подключиться</button>
+            <button onclick="app.joinRoom()" class="w-full bg-cyan-500 text-black font-black py-4 rounded-xl uppercase text-xs">ПОДКЛЮЧИТЬСЯ</button>
         </div>
     </div>
 
-    <!-- 5. ИГРОВОЙ ЭКРАН -->
+    <!-- 3. ЭКРАН СИНХРОНИЗАЦИИ (МАГИЯ ЗДЕСЬ) -->
+    <div id="screen-sync" class="screen p-6 justify-center items-center text-center bg-black/95 z-50">
+        <div id="sync-status" class="text-cyan-400 text-lg animate-pulse mb-6 font-bold uppercase">Ожидание Игрока 2...</div>
+        <div id="room-code" class="text-5xl font-black text-white bg-zinc-900 py-4 px-8 rounded-2xl tracking-[0.2em] border border-zinc-800">----</div>
+        <p id="sync-details" class="text-zinc-500 text-[10px] mt-6 uppercase">Продиктуйте код другу</p>
+    </div>
+
+    <!-- 4. ИГРОВОЙ ЭКРАН -->
     <div id="screen-game" class="screen">
         <div class="h-10 bg-zinc-950 flex justify-between items-center px-4 border-b border-zinc-800">
             <span id="game-tag" class="text-[9px] font-bold text-cyan-400 uppercase tracking-widest"></span>
-            <button id="exit-btn" onclick="location.reload()" class="text-red-500 text-[8px] font-bold uppercase bg-red-900/20 px-3 py-1 rounded-full border border-red-900/50">Выход</button>
+            <button onclick="location.reload()" class="text-red-500 text-[8px] font-bold uppercase">Выход</button>
         </div>
         
         <div id="emulator-wrapper"><div id="game-container"></div></div>
@@ -88,27 +76,19 @@
     </div>
 
     <script>
-        // ==========================================
-        // 🔴 ВЗЛОМ БРАУЗЕРА (ВИРТУАЛЬНЫЕ USB ДЖОЙСТИКИ)
-        // ==========================================
-        // Мы создаем в памяти 2 "железных" джойстика. Эмулятор их подхватит автоматически.
         const myPads = [
-            { id: "P1", index: 0, connected: true, buttons: Array(16).fill(0).map(() => ({ pressed: false, value: 0 })), axes: [0,0], mapping: "standard" },
-            { id: "P2", index: 1, connected: true, buttons: Array(16).fill(0).map(() => ({ pressed: false, value: 0 })), axes: [0,0], mapping: "standard" }
+            { index: 0, connected: true, buttons: Array(16).fill(0).map(() => ({ pressed: false, value: 0 })), axes: [0,0] },
+            { index: 1, connected: true, buttons: Array(16).fill(0).map(() => ({ pressed: false, value: 0 })), axes: [0,0] }
         ];
         navigator.getGamepads = () => myPads;
 
-        // ==========================================
-        // 🟢 ЛОГИКА ПРИЛОЖЕНИЯ И СЕТИ
-        // ==========================================
         const socket = io();
         let currentRoom = null;
         let playerNum = 1; 
         let isSolo = true;
+        let blobUrl = null; // Здесь будет лежать скачанная игра
 
-        // Карта индексов кнопок для стандартного Gamepad API
         const btnMap = { UP: 12, DOWN: 13, LEFT: 14, RIGHT: 15, A: 0, START: 9 };
-
         const ROM_URL = 'https://raw.githubusercontent.com/klimsporyshevklim-collab/Retrosega/main/public/battletoads.bin';
 
         window.app = {
@@ -117,52 +97,68 @@
                 document.getElementById(id).classList.add('active');
             },
             
-            // 1. Соло режим (в Телеге)
             launchSolo: function() {
                 isSolo = true; playerNum = 1;
-                this.loadEmulator('ОДИНОЧНАЯ ИГРА');
+                this.switch('screen-sync');
+                document.getElementById('sync-status').innerText = "ЗАГРУЗКА...";
+                document.getElementById('room-code').style.display = 'none';
+                this.downloadRomAndReady();
             },
             
-            // 2. Побег в браузер
-            goExternal: function() {
-                const url = window.location.origin + '?mode=mp';
-                if (window.Telegram && window.Telegram.WebApp) window.Telegram.WebApp.openLink(url);
-                else window.location.href = url;
-            },
-
-            // 3. Создание лобби
             createRoom: function() {
                 isSolo = false; playerNum = 1;
                 currentRoom = Math.random().toString(36).substring(2, 6).toUpperCase();
                 document.getElementById('room-code').innerText = currentRoom;
-                this.switch('screen-wait');
+                this.switch('screen-sync');
                 socket.emit('createRoom', currentRoom);
             },
 
-            // 4. Окно входа P2
             showJoin: function() { this.switch('screen-join'); },
             
-            // 5. Вход P2
             joinRoom: function() {
                 const code = document.getElementById('join-input').value.toUpperCase();
                 if(code.length !== 4) return;
                 isSolo = false; playerNum = 2;
                 currentRoom = code;
+                this.switch('screen-sync');
+                document.getElementById('sync-status').innerText = "ПОДКЛЮЧЕНИЕ...";
+                document.getElementById('room-code').innerText = currentRoom;
                 socket.emit('joinRoom', currentRoom);
             },
 
-            // 6. Загрузка эмулятора
-            loadEmulator: function(tagText) {
+            // Функция скачивания игры в память
+            downloadRomAndReady: async function() {
+                document.getElementById('sync-status').innerText = "СКАЧИВАНИЕ ИГРЫ...";
+                document.getElementById('sync-details').innerText = "Пожалуйста, подождите";
+                
+                try {
+                    const res = await fetch(ROM_URL);
+                    const blob = await res.blob();
+                    blobUrl = URL.createObjectURL(blob); // Сохраняем готовую игру в ОЗУ
+                    
+                    if (isSolo) {
+                        this.bootEmulator(); // В соло запускаем сразу
+                    } else {
+                        document.getElementById('sync-status').innerText = "ОЖИДАНИЕ СОПЕРНИКА...";
+                        document.getElementById('sync-details').innerText = "Игра скачана. Ждем готовность второго игрока.";
+                        socket.emit('playerReady', currentRoom); // Говорим серверу, что мы готовы
+                    }
+                } catch (e) {
+                    alert("Ошибка скачивания: " + e.message);
+                }
+            },
+
+            // ОДНОВРЕМЕННЫЙ ЗАПУСК ЭМУЛЯТОРА
+            bootEmulator: function() {
                 this.switch('screen-game');
-                document.getElementById('game-tag').innerText = tagText;
+                document.getElementById('game-tag').innerText = isSolo ? 'SOLO' : `PVP: ${currentRoom} | P${playerNum}`;
 
                 window.EJS_player = '#game-container';
                 window.EJS_core = 'sega';
-                window.EJS_gameUrl = ROM_URL;
+                window.EJS_gameUrl = blobUrl; // Берем уже скачанную игру!
                 window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
                 window.EJS_startOnLoaded = true;
 
-                // Насильно включаем 2 порт
                 window.EJS_onGameStart = function() {
                     if (window.EJS_emulator) window.EJS_emulator.setSettings({ p2_type: 1 });
                 };
@@ -173,51 +169,34 @@
             }
         };
 
-        // --- УМНАЯ МАРШРУТИЗАЦИЯ ПРИ СТАРТЕ ---
-        window.onload = () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('mode') === 'mp') {
-                // Если мы открылись во внешнем браузере - показываем меню лобби!
-                app.switch('screen-mp-lobby');
-                // Прячем кнопку выхода, так как мы в сафари/хроме
-                document.getElementById('exit-btn').style.display = 'none';
-            } else {
-                // Иначе показываем главное меню Телеграма
-                app.switch('screen-tg-menu');
-            }
-        };
-
-        // СЕРВЕР СКАЗАЛ СТАРТ (Оба игрока готовы)
-        socket.on('syncStart', () => {
-            app.loadEmulator(`ТУРНИР: ${currentRoom} | ИГРОК ${playerNum}`);
+        // Сервер говорит "Оба зашли, качайте игру"
+        socket.on('startDownload', () => {
+            app.downloadRomAndReady();
         });
 
-        // ПРИЕМ КНОПОК ПО СЕТИ
+        // Сервер говорит "Оба скачали, СТАРТ!"
+        socket.on('bootEngine', () => {
+            app.bootEmulator();
+        });
+
         socket.on('inputSync', (data) => {
             if (isSolo) return;
-            const padIdx = data.player - 1; // 0 для P1, 1 для P2
+            const padIdx = data.player - 1; 
             const bIdx = btnMap[data.btn];
-            
-            // Нажимаем виртуальную кнопку в чужом порту
             myPads[padIdx].buttons[bIdx] = { pressed: data.state, value: data.state ? 1 : 0 };
         });
 
-        // ОТПРАВКА НАЖАТИЙ
         function bind(id, k) {
             const el = document.getElementById(id);
             const handle = (isDown) => {
                 const myIdx = playerNum - 1;
                 const bIdx = btnMap[k];
-                
-                // Нажимаем у себя
                 myPads[myIdx].buttons[bIdx] = { pressed: isDown, value: isDown ? 1 : 0 };
-                
-                // Отправляем в сеть
                 if(!isSolo && currentRoom) {
                     socket.emit('inputSync', { roomId: currentRoom, player: playerNum, btn: k, state: isDown });
                 }
             };
-            el.onpointerdown = (e) => { e.preventDefault(); handle(true); if(window.Telegram && window.Telegram.WebApp) Telegram.WebApp.HapticFeedback.impactOccurred('medium'); };
+            el.onpointerdown = (e) => { e.preventDefault(); handle(true); };
             el.onpointerup = (e) => { e.preventDefault(); handle(false); };
             el.onpointerleave = (e) => { e.preventDefault(); handle(false); };
         }
