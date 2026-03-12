@@ -1,6 +1,7 @@
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
+const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
@@ -8,32 +9,31 @@ const io = socketIo(server, { cors: { origin: "*" } });
 
 app.use(express.static('public'));
 
+// Хранилище комнат
 const rooms = {};
 
 io.on('connection', (socket) => {
-    console.log('User connected:', socket.id);
-
     socket.on('createRoom', (roomId) => {
         socket.join(roomId);
-        // readyCount - счетчик загрузившихся игроков
-        rooms[roomId] = { host: socket.id, guest: null, readyCount: 0 };
+        rooms[roomId] = { host: socket.id, guest: null, ready: 0 };
+        console.log(`Room created: ${roomId}`);
     });
 
     socket.on('joinRoom', (roomId) => {
-        if (rooms[roomId] && !rooms[roomId].guest) {
+        if (rooms[roomId]) {
             socket.join(roomId);
             rooms[roomId].guest = socket.id;
-            // Говорим обоим: "Начинайте скачивать игру"
+            // Уведомляем обоих, что пора скачивать игру
             io.to(roomId).emit('startDownload'); 
+        } else {
+            socket.emit('systemError', 'Комната не найдена');
         }
     });
 
-    // Игрок сообщает, что скачал игру и готов
     socket.on('playerReady', (roomId) => {
         if (rooms[roomId]) {
-            rooms[roomId].readyCount++;
-            // Если оба скачали - даем команду на одновременный старт ядра
-            if (rooms[roomId].readyCount === 2) {
+            rooms[roomId].ready++;
+            if (rooms[roomId].ready === 2) {
                 io.to(roomId).emit('bootEngine');
             }
         }
@@ -44,5 +44,9 @@ io.on('connection', (socket) => {
     });
 });
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Server is running on ${PORT}`));
+// Пинг для Render, чтобы не спал
+setInterval(() => {
+    http.get('https://retrosega.onrender.com/health');
+}, 300000); // каждые 5 минут
+
+server.listen(process.env.PORT || 3000, () => console.log("Server Live"));
