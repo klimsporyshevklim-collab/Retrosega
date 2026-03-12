@@ -1,99 +1,42 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>Pixel Arena v24.0</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Battletoads PvP</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="/socket.io/socket.io.js"></script>
-    <style>
-        body { background: #000; color: #fff; font-family: monospace; overflow: hidden; margin: 0; }
-        .screen { position: fixed; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; background: #000; z-index: 1000; }
-        .screen.active { display: flex; }
-        .btn { padding: 20px; background: #333; border-radius: 50%; width: 60px; height: 60px; }
-        .btn:active { background: #00f0ff; }
-    </style>
 </head>
-<body>
+<body class="bg-black text-white flex flex-col items-center justify-center h-screen p-4">
+    <h1 class="text-2xl font-bold mb-8 uppercase text-cyan-400">Battletoads Arena</h1>
+    
+    <!-- КНОПКА ДЛЯ ТЕЛЕГРАМА -->
+    <button id="open-browser" class="bg-cyan-500 text-black font-black w-full py-6 rounded-2xl uppercase">
+        Открыть в браузере для игры
+    </button>
 
-    <div id="screen-menu" class="screen active">
-        <h1 class="text-4xl font-bold text-cyan-400 mb-10">PIXEL ARENA</h1>
-        <button onclick="app.host()" class="bg-cyan-500 text-black px-10 py-4 rounded-xl font-bold mb-4">СОЗДАТЬ ЛОББИ</button>
-        <button onclick="app.showJoin()" class="bg-zinc-800 text-white px-10 py-4 rounded-xl font-bold">ВОЙТИ В ЛОББИ</button>
-    </div>
-
-    <div id="screen-join" class="screen p-6">
-        <input id="room-input" type="text" maxlength="4" placeholder="КОД" class="bg-zinc-900 text-white text-center text-4xl p-6 rounded-2xl w-full mb-6">
-        <button onclick="app.join()" class="bg-cyan-500 w-full py-4 rounded-2xl font-bold">ПОДКЛЮЧИТЬСЯ</button>
-    </div>
-
-    <div id="screen-game" class="screen">
-        <div id="game-container" style="flex:1; width:100%;"></div>
-        <div class="grid grid-cols-3 p-4 gap-4 bg-zinc-900">
-            <button class="btn" onpointerdown="app.send('UP', true)" onpointerup="app.send('UP', false)">▲</button>
-            <button class="btn" onpointerdown="app.send('A', true)" onpointerup="app.send('A', false)">A</button>
-            <button class="btn" onpointerdown="app.send('START', true)" onpointerup="app.send('START', false)">S</button>
-        </div>
+    <div id="game-area" class="hidden w-full h-full">
+        <!-- Ссылка на эмулятор с Netplay -->
+        <iframe id="game-frame" src="" width="100%" height="100%" allow="gamepad *; microphone *"></iframe>
     </div>
 
     <script>
-        const socket = io({ reconnection: true, reconnectionAttempts: 5 });
-        let room = null;
-        let pNum = 1;
+        const btn = document.getElementById('open-browser');
+        const url = window.location.origin + '/game.html';
 
-        const maps = [
-            { UP: "ArrowUp", DOWN: "ArrowDown", LEFT: "ArrowLeft", RIGHT: "ArrowRight", A: "KeyX", START: "Enter" },
-            { UP: "KeyW", DOWN: "KeyS", LEFT: "KeyA", RIGHT: "KeyD", A: "KeyF", START: "ShiftLeft" }
-        ];
-
-        window.app = {
-            host: function() {
-                room = Math.random().toString(36).substring(2, 6).toUpperCase();
-                socket.emit('createRoom', room);
-                alert("Код комнаты: " + room);
-                document.getElementById('screen-menu').classList.remove('active');
-            },
-            showJoin: function() { this.switch('screen-join'); },
-            join: function() {
-                room = document.getElementById('room-input').value.toUpperCase();
-                pNum = 2;
-                socket.emit('joinRoom', room);
-            },
-            switch: (id) => {
-                document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-                document.getElementById(id).classList.add('active');
-            },
-            send: (btn, state) => {
-                const map = maps[pNum-1];
-                const code = map[btn];
-                // Локально
-                const canvas = document.querySelector('canvas');
-                if(canvas) { canvas.focus(); canvas.dispatchEvent(new KeyboardEvent(state ? 'keydown' : 'keyup', { code: code, bubbles: true })); }
-                // Сеть
-                if(room) socket.emit('inputSync', { roomId: room, player: pNum, btn: btn, state: state });
+        btn.onclick = () => {
+            if (window.Telegram && window.Telegram.WebApp) {
+                window.Telegram.WebApp.openLink(url);
+            } else {
+                window.location.href = url;
             }
         };
 
-        socket.on('syncStart', () => {
-            app.switch('screen-game');
-            // Загрузка эмулятора
-            window.EJS_player = '#game-container';
-            window.EJS_core = 'sega';
-            window.EJS_gameUrl = window.location.origin + '/battletoads.bin';
-            window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
-            window.EJS_startOnLoaded = true;
-            const s = document.createElement('script');
-            s.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
-            document.body.appendChild(s);
-        });
-
-        socket.on('inputSync', (data) => {
-            const map = maps[data.player-1];
-            const canvas = document.querySelector('canvas');
-            if(canvas) {
-                const ev = new KeyboardEvent(data.state ? 'keydown' : 'keyup', { code: map[data.btn], bubbles: true });
-                canvas.dispatchEvent(ev);
-            }
-        });
+        // Если мы уже в браузере - запускаем игру
+        if (window.location.pathname === '/game.html') {
+            document.getElementById('menu').classList.add('hidden');
+            document.getElementById('game-area').classList.remove('hidden');
+            // Здесь мы используем эмулятор с поддержкой Netplay
+            document.getElementById('game-frame').src = "https://www.retrogames.cc/embed/17395-battletoads-usa.html";
+        }
     </script>
 </body>
 </html>
