@@ -2,74 +2,109 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Pixel Arena - True Netplay</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Pixel Arena - Hybrid Platform</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { margin: 0; background: #09090b; color: #fff; font-family: monospace; overflow: hidden; }
-        #menu { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; padding: 20px; }
-        #game-overlay { display: none; width: 100vw; height: 100vh; background: #000; }
-        #game-container { width: 100%; height: 100%; }
+        body { margin: 0; background: #000; color: #fff; font-family: monospace; overflow: hidden; }
+        
+        /* Главное меню */
+        #menu { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: #09090b; padding: 20px; z-index: 10; position: relative; }
+        
+        /* Окно эмулятора */
+        #game-overlay { display: none; position: fixed; inset: 0; background: #000; z-index: 1000; flex-direction: column; }
+        #game-container { width: 100vw; height: 100vh; }
+        
+        /* Кнопка закрытия для режима внутри ТГ */
+        #close-btn { position: absolute; top: 10px; right: 10px; background: rgba(255,0,0,0.5); color: white; border: 1px solid red; padding: 5px 10px; border-radius: 5px; font-weight: bold; z-index: 2000; }
+        
+        .pulse-text { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
     </style>
 </head>
 <body>
 
+    <!-- МЕНЮ ПРИЛОЖЕНИЯ -->
     <div id="menu">
-        <h1 class="text-cyan-400 text-4xl font-black italic mb-8 uppercase tracking-tighter">Pixel Arena</h1>
+        <div class="text-center mb-8">
+            <h1 class="text-cyan-400 text-4xl font-black italic uppercase tracking-tighter shadow-cyan-500/50 drop-shadow-lg">PIXEL ARENA</h1>
+            <p class="text-zinc-500 text-[10px] tracking-[0.3em] uppercase mt-2">Retro Tournament Platform</p>
+        </div>
         
-        <div class="bg-zinc-900 p-8 rounded-3xl border border-zinc-800 text-center shadow-2xl w-full max-w-sm">
-            <div class="text-6xl mb-6">🐸</div>
-            <h2 class="text-white text-2xl font-bold mb-2 uppercase">Battletoads</h2>
-            <p class="text-zinc-500 text-[10px] mb-8 uppercase">Для мультиплеера нужен внешний браузер</p>
+        <div class="bg-zinc-900 p-8 rounded-[2.5rem] border border-zinc-800 text-center shadow-2xl w-full max-w-sm relative overflow-hidden">
+            <!-- Декоративное свечение -->
+            <div class="absolute -top-10 -right-10 w-32 h-32 bg-cyan-500/10 rounded-full blur-3xl"></div>
             
-            <button onclick="launchExternal()" class="bg-cyan-500 text-black px-8 py-4 rounded-xl font-black uppercase w-full shadow-lg mb-4">
-                ИГРАТЬ (ОТКРЫТЬ В БРАУЗЕРЕ)
-            </button>
+            <div class="text-6xl mb-6 relative z-10">🐸</div>
+            <h2 class="text-white text-2xl font-bold mb-8 uppercase tracking-widest relative z-10">Battletoads</h2>
             
-            <button onclick="launchInternal()" class="bg-zinc-800 text-white px-8 py-3 rounded-xl font-bold uppercase w-full text-xs">
-                Тест внутри Telegram
-            </button>
+            <div class="space-y-4 relative z-10">
+                <!-- КНОПКА 1: Одиночная игра внутри Telegram -->
+                <button onclick="launchSolo()" class="bg-zinc-800 text-white px-8 py-4 rounded-2xl font-bold uppercase w-full text-xs border border-zinc-700 active:scale-95 transition-transform hover:bg-zinc-700">
+                    <span class="block text-[14px] text-cyan-400 mb-1">ОДИНОЧНАЯ ИГРА</span>
+                    <span class="text-[8px] text-zinc-400">Тренировка внутри Telegram</span>
+                </button>
+                
+                <!-- КНОПКА 2: Мультиплеер во внешнем браузере -->
+                <button onclick="launchMultiplayer()" class="bg-cyan-500 text-black px-8 py-4 rounded-2xl font-black uppercase w-full shadow-[0_0_15px_rgba(0,240,255,0.4)] active:scale-95 transition-transform">
+                    <span class="block text-[14px] mb-1">СЕТЕВОЙ ТУРНИР (PVP)</span>
+                    <span class="text-[8px] opacity-70">Откроется в браузере телефона</span>
+                </button>
+            </div>
         </div>
     </div>
 
+    <!-- ИГРОВОЙ ЭКРАН (Для Solo режима) -->
     <div id="game-overlay">
+        <button id="close-btn" onclick="location.reload()">ВЫХОД</button>
         <div id="game-container"></div>
     </div>
 
     <script>
-        // Функция 1: Побег из Телеграма (для реального мультиплеера)
-        function launchExternal() {
-            const gameUrl = window.location.origin + '?play=true';
-            if (window.Telegram && window.Telegram.WebApp) {
-                window.Telegram.WebApp.openLink(gameUrl);
-            } else {
-                window.location.href = gameUrl;
-            }
-        }
-
-        // Функция 2: Запуск самого эмулятора
-        function launchInternal() {
+        // Ссылка на игру с твоего GitHub (100% надежный путь)
+        const ROM_URL = 'https://raw.githubusercontent.com/klimsporyshevklim-collab/Retrosega/main/public/battletoads.bin';
+        
+        // --- РЕЖИМ 1: ОДИНОЧНАЯ ИГРА (Внутри Telegram) ---
+        function launchSolo() {
             document.getElementById('menu').style.display = 'none';
             document.getElementById('game-overlay').style.display = 'block';
 
             window.EJS_player = '#game-container';
             window.EJS_core = 'sega';
-            window.EJS_gameUrl = 'https://raw.githubusercontent.com/klimsporyshevklim-collab/Retrosega/main/public/battletoads.bin';
+            window.EJS_gameUrl = ROM_URL;
             window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
             window.EJS_startOnLoaded = true;
-            window.EJS_VirtualGamepad = true; // Включаем родной джойстик
+            window.EJS_VirtualGamepad = true; // Включаем мобильный джойстик на экране
 
             const script = document.createElement('script');
             script.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
             document.body.appendChild(script);
         }
 
-        // Автозапуск, если открыли во внешнем браузере
+        // --- РЕЖИМ 2: МУЛЬТИПЛЕЕР (Переход во внешний браузер) ---
+        function launchMultiplayer() {
+            // Формируем ссылку на твой сервер Render со специальным параметром
+            const gameUrl = window.location.origin + '?mode=tournament';
+            
+            // Если открыто в Telegram - принудительно открываем системный браузер (Chrome/Safari)
+            if (window.Telegram && window.Telegram.WebApp) {
+                window.Telegram.WebApp.openLink(gameUrl);
+            } else {
+                // Фолбек для обычного браузера
+                window.location.href = gameUrl;
+            }
+        }
+
+        // --- АВТОЗАПУСК ДЛЯ ВНЕШНЕГО БРАУЗЕРА ---
+        // Когда игрок перейдет по ссылке из Telegram в Safari/Chrome, 
+        // скрипт увидит параметр ?mode=tournament и сразу запустит эмулятор
         window.onload = () => {
             const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('play') === 'true') {
-                launchInternal();
+            if (urlParams.get('mode') === 'tournament') {
+                // Прячем кнопку "Выход", так как мы в браузере
+                document.getElementById('close-btn').style.display = 'none';
+                launchSolo(); // Метод загрузки эмулятора тот же
             }
         };
     </script>
