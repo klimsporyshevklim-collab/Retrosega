@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Pixel Arena v20.0</title>
+    <title>Pixel Arena v21.0</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="/socket.io/socket.io.js"></script>
@@ -14,47 +14,36 @@
         #game-container { width: 100% !important; height: 100% !important; }
         .ctrl-btn { width: 65px; height: 65px; background: #222; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; border: 2px solid #444; touch-action: none; color: #0f0; }
         .ctrl-btn:active { background: #00f0ff; color: #000; transform: scale(0.9); }
-        input { background: #111; border: 1px solid #333; color: #00f0ff; padding: 12px; width: 100%; text-align: center; font-size: 20px; font-weight: bold; border-radius: 10px; text-transform: uppercase; outline: none; }
+        .wait-screen { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 4000; display: none; flex-direction: column; items-center justify-content: center; text-align: center; }
     </style>
 </head>
 <body class="flex flex-col h-screen bg-zinc-950">
 
-    <!-- ОКНО ВХОДА -->
-    <div id="join-screen" class="hidden fixed inset-0 bg-black/95 z-[5000] flex flex-col items-center justify-center p-8">
-        <div class="w-full max-w-xs space-y-6 text-center">
-            <h3 class="text-white font-bold uppercase text-sm tracking-widest">Вход в комнату</h3>
-            <input id="input-id" type="text" maxlength="4" placeholder="КОД">
-            <button onclick="app.confirmJoin()" class="w-full bg-cyan-500 text-black font-black py-4 rounded-2xl shadow-lg shadow-cyan-500/20">ПОДКЛЮЧИТЬСЯ</button>
-            <button onclick="document.getElementById('join-screen').style.display='none'" class="text-zinc-500 text-[10px] uppercase underline">Назад</button>
-        </div>
+    <!-- ЭКРАН ОЖИДАНИЯ -->
+    <div id="wait-screen" class="wait-screen flex flex-col items-center justify-center p-8">
+        <div class="text-cyan-400 text-xl animate-pulse mb-4 font-bold uppercase">Ожидание Игрока 2...</div>
+        <div class="text-white text-xs mb-2">ВАШ КОД КОМНАТЫ:</div>
+        <div id="room-code-display" class="text-5xl font-black text-white border-2 border-cyan-500 p-6 rounded-3xl tracking-widest">----</div>
+        <p class="text-zinc-600 text-[10px] mt-8">Игра начнется автоматически</p>
     </div>
 
-    <!-- ГЛАВНОЕ МЕНЮ -->
+    <!-- МЕНЮ -->
     <main id="menu" class="flex-1 flex flex-col items-center justify-center p-6 space-y-10">
-        <div class="text-center space-y-2">
-            <h1 class="text-cyan-400 text-4xl font-black italic tracking-tighter uppercase">PIXEL ARENA</h1>
-            <p class="text-zinc-600 text-[10px] tracking-[0.4em]">Sega Cloud System</p>
-        </div>
-        
+        <h1 class="text-cyan-400 text-4xl font-black italic uppercase">PIXEL ARENA</h1>
         <div class="bg-zinc-900 p-8 rounded-[2.5rem] border border-zinc-800 w-full max-w-sm text-center shadow-2xl space-y-6">
-            <div class="text-6xl">🐸</div>
-            <h4 class="text-white font-bold uppercase tracking-widest">Battletoads</h4>
-            <div class="flex flex-col gap-3">
-                <button onclick="app.create()" class="w-full bg-cyan-500 text-black font-black py-4 rounded-2xl uppercase text-xs shadow-lg">Создать Лобби</button>
-                <button onclick="document.getElementById('join-screen').style.display='flex'" class="w-full bg-zinc-800 text-white font-bold py-4 rounded-2xl uppercase text-xs border border-zinc-700">Войти по ID</button>
-            </div>
+            <div class="text-6xl mb-4">🐸</div>
+            <button onclick="app.initHost()" class="w-full bg-cyan-500 text-black font-black py-4 rounded-2xl uppercase text-xs">Создать Лобби</button>
+            <button onclick="app.showJoin()" class="w-full bg-zinc-800 text-white font-bold py-4 rounded-2xl uppercase text-xs border border-zinc-700">Войти по ID</button>
         </div>
     </main>
 
-    <!-- ЭКРАН ИГРЫ -->
+    <!-- ИГРОВОЙ ЭКРАН -->
     <div id="game-overlay">
         <div class="h-10 bg-zinc-900 border-b border-cyan-900/50 flex justify-between items-center px-4">
-            <span id="room-info" class="text-cyan-400 text-[9px] font-bold uppercase tracking-widest"></span>
-            <button onclick="location.reload()" class="bg-red-900/20 text-red-500 text-[8px] px-3 py-1 rounded-full font-bold uppercase border border-red-900/50">Выход</button>
+            <span id="room-info" class="text-cyan-400 text-[9px] font-bold"></span>
+            <button onclick="location.reload()" class="bg-red-900/20 text-red-500 text-[8px] px-3 py-1 rounded-full font-bold uppercase">Выход</button>
         </div>
-
         <div id="emulator-wrapper"><div id="game-container"></div></div>
-        
         <div class="flex-1 bg-zinc-950 p-4 flex flex-col justify-around items-center">
             <div class="flex justify-between items-center w-full max-w-md mx-auto">
                 <div class="grid grid-cols-3 gap-2">
@@ -65,51 +54,52 @@
                     <button class="ctrl-btn" id="btn-down">▼</button><div></div>
                 </div>
                 <div class="flex flex-col gap-6 items-center">
-                    <button class="ctrl-btn bg-red-600 border-red-400 text-white font-bold text-2xl shadow-lg shadow-red-600/20" id="btn-a">A</button>
-                    <button class="bg-zinc-800 py-3 px-8 rounded-2xl text-[10px] font-bold text-white border border-zinc-700 uppercase tracking-widest" id="btn-start">Start</button>
+                    <div class="flex gap-2">
+                        <button class="ctrl-btn bg-red-600 text-white font-bold" id="btn-a">A</button>
+                        <button class="ctrl-btn bg-yellow-500 text-white font-bold" id="btn-b">B</button>
+                    </div>
+                    <button class="bg-zinc-800 py-3 px-8 rounded-xl text-[10px] font-bold text-white border border-zinc-700 uppercase" id="btn-start">Start</button>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        // ==========================================
-        // 🔴 ВЗЛОМ БРАУЗЕРА (VIRTUAL USB GAMEPAD PATCH)
-        // ==========================================
-        const virtualPads = [
-            { id: "Gamepad 1", index: 0, connected: true, buttons: Array(16).fill(0).map(() => ({ pressed: false, value: 0 })), axes: [0, 0], mapping: "standard" },
-            { id: "Gamepad 2", index: 1, connected: true, buttons: Array(16).fill(0).map(() => ({ pressed: false, value: 0 })), axes: [0, 0], mapping: "standard" }
+        // === ПАТЧ ГЕЙМПАДА ДЛЯ EMULATORJS ===
+        const myPads = [
+            { id: "X360 P1", index: 0, connected: true, buttons: Array(16).fill(0).map(() => ({ pressed: false, value: 0 })), axes: [0,0], mapping: "standard" },
+            { id: "X360 P2", index: 1, connected: true, buttons: Array(16).fill(0).map(() => ({ pressed: false, value: 0 })), axes: [0,0], mapping: "standard" }
         ];
+        navigator.getGamepads = () => myPads;
 
-        navigator.getGamepads = () => virtualPads;
-
-        // ==========================================
-        // 🟢 ЛОГИКА ПРИЛОЖЕНИЯ
-        // ==========================================
         const socket = io();
-        let currentRoom = null;
-        let playerNum = 1; 
+        let room = null;
+        let pNum = 1; 
 
-        // Карта кнопок (индексы стандартного Gamepad API)
-        const btnMap = { UP: 12, DOWN: 13, LEFT: 14, RIGHT: 15, A: 0, START: 9 };
+        // Маппинг: Наша кнопка -> Индекс в Gamepad API
+        const btnMap = { UP: 12, DOWN: 13, LEFT: 14, RIGHT: 15, A: 0, B: 1, START: 9 };
 
         window.app = {
-            create: function() {
-                playerNum = 1;
-                currentRoom = Math.random().toString(36).substring(2, 6).toUpperCase();
-                socket.emit('createRoom', currentRoom);
-                alert("КОД КОМНАТЫ: " + currentRoom + "\nПередайте его другу!");
+            initHost: function() {
+                pNum = 1;
+                room = Math.random().toString(36).substring(2, 6).toUpperCase();
+                document.getElementById('room-code-display').innerText = room;
+                document.getElementById('wait-screen').style.display = 'flex';
+                socket.emit('createRoom', room);
             },
-            confirmJoin: function() {
-                currentRoom = document.getElementById('input-id').value.toUpperCase();
-                playerNum = 2;
-                socket.emit('joinRoom', currentRoom);
+            showJoin: function() {
+                const code = prompt("Введите ID Хоста:");
+                if(code) {
+                    room = code.toUpperCase();
+                    pNum = 2;
+                    socket.emit('joinRoom', room);
+                }
             },
             load: function() {
                 document.getElementById('menu').style.display = 'none';
-                document.getElementById('join-screen').style.display = 'none';
+                document.getElementById('wait-screen').style.display = 'none';
                 document.getElementById('game-overlay').style.display = 'flex';
-                document.getElementById('room-info').innerText = `LOBBY: ${currentRoom} | PLAYER: ${playerNum}`;
+                document.getElementById('room-info').innerText = `LOBBY: ${room} | PLAYER ${pNum}`;
 
                 window.EJS_player = '#game-container';
                 window.EJS_core = 'sega';
@@ -117,7 +107,7 @@
                 window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
                 window.EJS_startOnLoaded = true;
 
-                // Насильно включаем второй порт при старте
+                // Настройка портов при старте
                 window.EJS_onGameStart = () => {
                     if(window.EJS_emulator) window.EJS_emulator.setSettings({ p2_type: 1 });
                 };
@@ -128,32 +118,34 @@
             }
         };
 
-        socket.on('syncStart', () => app.load());
-
-        // Получаем нажатия от другого игрока (через "Виртуальный USB")
-        socket.on('inputSync', (data) => {
-            const padIdx = data.player - 1;
-            const btnIdx = btnMap[data.btn];
-            virtualPads[padIdx].buttons[btnIdx] = { pressed: data.state, value: data.state ? 1 : 0 };
+        // Сервер говорит СТАРТ
+        socket.on('syncStart', () => {
+            console.log("Оба игрока готовы. Запуск эмулятора...");
+            app.load();
         });
 
-        // Отправка своих нажатий
+        // Прием кнопок
+        socket.on('inputSync', (data) => {
+            const padIdx = data.player - 1;
+            const bIdx = btnMap[data.btn];
+            myPads[padIdx].buttons[bIdx] = { pressed: data.state, value: data.state ? 1 : 0 };
+        });
+
+        // Отправка кнопок
         function bind(id, k) {
             const el = document.getElementById(id);
             const handle = (isDown) => {
-                const myIdx = playerNum - 1;
+                const myIdx = pNum - 1;
                 const bIdx = btnMap[k];
-                // 1. Нажимаем у себя в виртуальном джойстике
-                virtualPads[myIdx].buttons[bIdx] = { pressed: isDown, value: isDown ? 1 : 0 };
-                // 2. Отправляем в сеть
-                if(currentRoom) socket.emit('inputSync', { roomId: currentRoom, player: playerNum, btn: k, state: isDown });
+                myPads[myIdx].buttons[bIdx] = { pressed: isDown, value: isDown ? 1 : 0 };
+                if(room) socket.emit('inputSync', { roomId: room, player: pNum, btn: k, state: isDown });
             };
             el.onpointerdown = (e) => { e.preventDefault(); handle(true); if(window.Telegram) Telegram.WebApp.HapticFeedback.impactOccurred('medium'); };
             el.onpointerup = (e) => { e.preventDefault(); handle(false); };
         }
 
         bind('btn-up', 'UP'); bind('btn-down', 'DOWN'); bind('btn-left', 'LEFT'); bind('btn-right', 'RIGHT');
-        bind('btn-a', 'A'); bind('btn-start', 'START');
+        bind('btn-a', 'A'); bind('btn-b', 'B'); bind('btn-start', 'START');
     </script>
 </body>
 </html>
