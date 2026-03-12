@@ -10,25 +10,22 @@
     <style>
         body { background: #000; color: #fff; font-family: monospace; margin: 0; overflow: hidden; }
         #game-overlay { position: fixed; inset: 0; background: #000; z-index: 1000; display: none; flex-direction: column; }
-        #emulator-wrapper { width: 100vw; height: 50vh !important; background: #111; position: relative; border-bottom: 2px solid #333; }
+        #emulator-wrapper { width: 100vw; height: 50vh !important; background: #111; position: relative; }
         #game-container { width: 100% !important; height: 100% !important; }
         .ctrl-btn { width: 65px; height: 65px; background: #222; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; border: 2px solid #444; touch-action: none; }
         .ctrl-btn:active { background: #444; transform: scale(0.9); }
-        #debug { position: fixed; top: 0; left: 0; background: rgba(0,0,0,0.8); font-size: 10px; padding: 5px; z-index: 10000; width: 100%; pointer-events: none; color: #0f0; }
     </style>
 </head>
 <body class="flex flex-col h-screen">
 
-    <div id="debug">Система готова. Ожидание запуска...</div>
-
     <main id="menu" class="flex-1 p-6 space-y-6">
-        <h1 class="text-cyan-400 text-2xl font-bold italic uppercase">Pixel Arena</h1>
-        
-        <div class="bg-zinc-900 p-4 rounded-xl border border-zinc-800 space-y-4 text-center">
-            <h4 class="text-white font-bold uppercase text-sm">Battletoads</h4>
-            <div class="flex gap-2">
-                <button onclick="app.run('battletoads.bin', 1)" class="bg-cyan-500 text-black font-black px-4 py-3 rounded-lg flex-1 text-xs">HOST LOBBY</button>
-                <button onclick="app.showJoin('battletoads.bin')" class="bg-red-600 font-bold px-4 py-3 rounded-lg flex-1 text-xs text-white">JOIN P2</button>
+        <h1 class="text-cyan-400 text-2xl font-bold italic tracking-tighter uppercase text-center">Pixel Arena</h1>
+        <div class="bg-zinc-900 p-6 rounded-2xl border border-zinc-800 text-center space-y-4 shadow-2xl">
+            <div class="text-4xl">🐸</div>
+            <h4 class="text-white font-bold uppercase text-lg">Battletoads</h4>
+            <div class="flex gap-4">
+                <button onclick="app.run('battletoads.bin', 1)" class="bg-cyan-500 text-black font-black py-4 rounded-xl flex-1 shadow-lg shadow-cyan-500/20">HOST LOBBY</button>
+                <button onclick="app.showJoin('battletoads.bin')" class="bg-red-600 font-bold py-4 rounded-xl flex-1 text-white">JOIN P2</button>
             </div>
         </div>
     </main>
@@ -60,7 +57,7 @@
                 </div>
                 <div class="flex flex-col gap-6">
                     <button class="ctrl-btn bg-red-600 border-red-400" id="btn-a">A</button>
-                    <button class="bg-zinc-800 py-2 px-4 rounded text-[10px] font-bold text-white" id="btn-start">START</button>
+                    <button class="bg-zinc-800 py-2 px-4 rounded text-[10px] font-bold text-white uppercase" id="btn-start">Start</button>
                 </div>
             </div>
         </div>
@@ -68,9 +65,6 @@
 
     <script>
         const socket = io();
-        const debug = document.getElementById('debug');
-        function log(m) { debug.innerText = "> " + m; }
-
         let currentRoom = null;
         let pNum = 1;
 
@@ -99,25 +93,28 @@
                 document.getElementById('menu').style.display = 'none';
                 document.getElementById('game-overlay').style.display = 'flex';
                 document.getElementById('game-tag').innerText = tag;
-                log("Инициализация...");
 
                 window.EJS_player = '#game-container';
                 window.EJS_core = 'sega';
-                // Ссылка на Render с меткой времени для обхода кэша
-                window.EJS_gameUrl = window.location.origin + '/' + romFile + '?v=' + Date.now();
+                // Берем ROM прямо с твоего сервера (обязательно .bin)
+                window.EJS_gameUrl = window.location.origin + '/' + romFile;
                 window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
                 window.EJS_startOnLoaded = true;
 
                 const s = document.createElement('script');
                 s.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
-                s.onload = () => log("Эмулятор запущен! Нажми START");
                 document.body.appendChild(s);
             }
         };
 
         function fireKey(code, isDown) {
             const canvas = document.querySelector('canvas');
-            const event = new KeyboardEvent(isDown ? 'keydown' : 'keyup', { code: code, bubbles: true });
+            const event = new KeyboardEvent(isDown ? 'keydown' : 'keyup', { 
+                code: code, 
+                key: code,
+                keyCode: (code === 'Enter' ? 13 : 0),
+                bubbles: true 
+            });
             document.dispatchEvent(event);
             if (canvas) { canvas.focus(); canvas.dispatchEvent(event); }
         }
@@ -136,7 +133,11 @@
                 fireKey(myMap[k], d);
                 if(currentRoom) socket.emit('inputSync', { roomId: currentRoom, player: pNum, btn: k, state: d });
             };
-            el.onpointerdown = (e) => { e.preventDefault(); handle(true); if(window.Telegram && window.Telegram.WebApp) window.Telegram.WebApp.HapticFeedback.impactOccurred('medium'); };
+            el.onpointerdown = (e) => { 
+                e.preventDefault(); 
+                handle(true); 
+                if (window.Telegram && window.Telegram.WebApp) window.Telegram.WebApp.HapticFeedback.impactOccurred('medium');
+            };
             el.onpointerup = (e) => { e.preventDefault(); handle(false); };
         }
         bind('btn-up', 'UP'); bind('btn-down', 'DOWN'); bind('btn-left', 'LEFT'); bind('btn-right', 'RIGHT');
