@@ -3,59 +3,60 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Pixel Arena Tournament</title>
+    <title>Pixel Arena v20.0</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="/socket.io/socket.io.js"></script>
     <style>
-        body { background: #000; color: #fff; font-family: monospace; margin: 0; overflow: hidden; }
+        body { background: #000; color: #fff; font-family: monospace; overflow: hidden; margin: 0; }
         #game-overlay { position: fixed; inset: 0; background: #000; z-index: 1000; display: none; flex-direction: column; }
-        #emulator-wrapper { width: 100vw; height: 50vh !important; background: #000; position: relative; }
+        #emulator-wrapper { width: 100vw; height: 50vh !important; background: #111; position: relative; }
         #game-container { width: 100% !important; height: 100% !important; }
-        .ctrl-btn { width: 65px; height: 65px; background: #1a1a1a; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; border: 2px solid #333; color: #0f0; touch-action: none; }
+        .ctrl-btn { width: 65px; height: 65px; background: #222; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; border: 2px solid #444; touch-action: none; color: #0f0; }
         .ctrl-btn:active { background: #00f0ff; color: #000; transform: scale(0.9); }
-        /* Модальное окно ввода */
-        #modal-join { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 5000; display: none; align-items: center; justify-content: center; padding: 20px; }
-        .modal-content { background: #18181b; border: 2px solid #00f0ff; padding: 30px; border-radius: 20px; width: 100%; max-width: 300px; text-align: center; }
-        input { background: #000; border: 1px solid #333; color: #00f0ff; padding: 15px; width: 100%; text-align: center; font-size: 24px; font-weight: bold; margin: 20px 0; border-radius: 10px; text-transform: uppercase; }
+        input { background: #111; border: 1px solid #333; color: #00f0ff; padding: 12px; width: 100%; text-align: center; font-size: 20px; font-weight: bold; border-radius: 10px; text-transform: uppercase; outline: none; }
     </style>
 </head>
 <body class="flex flex-col h-screen bg-zinc-950">
 
-    <!-- ОКНО ВВОДА ID (ВМЕСТО PROMPT) -->
-    <div id="modal-join">
-        <div class="modal-content">
-            <h3 class="text-white font-bold uppercase text-sm">Вход в турнир</h3>
-            <p class="text-zinc-500 text-[10px] mt-2">Введите 4 символа от Хоста</p>
-            <input id="input-id" type="text" maxlength="4" placeholder="----">
-            <button onclick="app.confirmJoin()" class="w-full bg-cyan-500 text-black font-black py-3 rounded-xl uppercase text-xs">Подключиться</button>
-            <button onclick="document.getElementById('modal-join').style.display='none'" class="mt-4 text-zinc-600 text-[10px] uppercase underline">Назад</button>
+    <!-- ОКНО ВХОДА -->
+    <div id="join-screen" class="hidden fixed inset-0 bg-black/95 z-[5000] flex flex-col items-center justify-center p-8">
+        <div class="w-full max-w-xs space-y-6 text-center">
+            <h3 class="text-white font-bold uppercase text-sm tracking-widest">Вход в комнату</h3>
+            <input id="input-id" type="text" maxlength="4" placeholder="КОД">
+            <button onclick="app.confirmJoin()" class="w-full bg-cyan-500 text-black font-black py-4 rounded-2xl shadow-lg shadow-cyan-500/20">ПОДКЛЮЧИТЬСЯ</button>
+            <button onclick="document.getElementById('join-screen').style.display='none'" class="text-zinc-500 text-[10px] uppercase underline">Назад</button>
         </div>
     </div>
 
-    <!-- МЕНЮ -->
-    <main id="menu" class="flex-1 p-6 flex flex-col items-center justify-center space-y-8">
-        <h1 class="text-cyan-400 text-4xl font-black italic tracking-tighter uppercase">PIXEL ARENA</h1>
+    <!-- ГЛАВНОЕ МЕНЮ -->
+    <main id="menu" class="flex-1 flex flex-col items-center justify-center p-6 space-y-10">
+        <div class="text-center space-y-2">
+            <h1 class="text-cyan-400 text-4xl font-black italic tracking-tighter uppercase">PIXEL ARENA</h1>
+            <p class="text-zinc-600 text-[10px] tracking-[0.4em]">Sega Cloud System</p>
+        </div>
+        
         <div class="bg-zinc-900 p-8 rounded-[2.5rem] border border-zinc-800 w-full max-w-sm text-center shadow-2xl space-y-6">
-            <div class="text-6xl mb-4">🐸</div>
-            <h4 class="text-white font-bold uppercase text-xl">Battletoads</h4>
+            <div class="text-6xl">🐸</div>
+            <h4 class="text-white font-bold uppercase tracking-widest">Battletoads</h4>
             <div class="flex flex-col gap-3">
-                <button onclick="app.startSolo()" class="bg-white text-black font-black py-4 rounded-2xl uppercase text-xs">Одиночная игра</button>
-                <div class="flex gap-2">
-                    <button onclick="app.create()" class="bg-cyan-500 text-black font-black py-3 rounded-2xl flex-1 text-[10px] uppercase">Создать</button>
-                    <button onclick="document.getElementById('modal-join').style.display='flex'" class="bg-zinc-800 font-bold py-3 rounded-2xl flex-1 text-[10px] uppercase text-white border border-zinc-700">Войти</button>
-                </div>
+                <button onclick="app.create()" class="w-full bg-cyan-500 text-black font-black py-4 rounded-2xl uppercase text-xs shadow-lg">Создать Лобби</button>
+                <button onclick="document.getElementById('join-screen').style.display='flex'" class="w-full bg-zinc-800 text-white font-bold py-4 rounded-2xl uppercase text-xs border border-zinc-700">Войти по ID</button>
             </div>
         </div>
     </main>
 
-    <!-- ИГРОВОЙ ЭКРАН -->
+    <!-- ЭКРАН ИГРЫ -->
     <div id="game-overlay">
-        <div id="info" class="fixed top-2 left-2 z-[2000] text-[8px] bg-black/50 p-2 rounded text-cyan-400 border border-cyan-400/30 font-bold uppercase">ROOM: ---</div>
+        <div class="h-10 bg-zinc-900 border-b border-cyan-900/50 flex justify-between items-center px-4">
+            <span id="room-info" class="text-cyan-400 text-[9px] font-bold uppercase tracking-widest"></span>
+            <button onclick="location.reload()" class="bg-red-900/20 text-red-500 text-[8px] px-3 py-1 rounded-full font-bold uppercase border border-red-900/50">Выход</button>
+        </div>
+
         <div id="emulator-wrapper"><div id="game-container"></div></div>
         
-        <div class="flex-1 bg-zinc-950 p-4 flex flex-col justify-around">
-            <div class="flex justify-between items-center w-full max-w-sm mx-auto">
+        <div class="flex-1 bg-zinc-950 p-4 flex flex-col justify-around items-center">
+            <div class="flex justify-between items-center w-full max-w-md mx-auto">
                 <div class="grid grid-cols-3 gap-2">
                     <div></div><button class="ctrl-btn" id="btn-up">▲</button><div></div>
                     <button class="ctrl-btn" id="btn-left">◀</button>
@@ -64,57 +65,61 @@
                     <button class="ctrl-btn" id="btn-down">▼</button><div></div>
                 </div>
                 <div class="flex flex-col gap-6 items-center">
-                    <button class="ctrl-btn bg-red-600 border-red-500 text-white font-bold text-2xl" id="btn-a">A</button>
-                    <button class="bg-zinc-800 py-3 px-8 rounded-xl text-[10px] font-bold text-white border border-zinc-700 uppercase" id="btn-start">Start</button>
+                    <button class="ctrl-btn bg-red-600 border-red-400 text-white font-bold text-2xl shadow-lg shadow-red-600/20" id="btn-a">A</button>
+                    <button class="bg-zinc-800 py-3 px-8 rounded-2xl text-[10px] font-bold text-white border border-zinc-700 uppercase tracking-widest" id="btn-start">Start</button>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
+        // ==========================================
+        // 🔴 ВЗЛОМ БРАУЗЕРА (VIRTUAL USB GAMEPAD PATCH)
+        // ==========================================
+        const virtualPads = [
+            { id: "Gamepad 1", index: 0, connected: true, buttons: Array(16).fill(0).map(() => ({ pressed: false, value: 0 })), axes: [0, 0], mapping: "standard" },
+            { id: "Gamepad 2", index: 1, connected: true, buttons: Array(16).fill(0).map(() => ({ pressed: false, value: 0 })), axes: [0, 0], mapping: "standard" }
+        ];
+
+        navigator.getGamepads = () => virtualPads;
+
+        // ==========================================
+        // 🟢 ЛОГИКА ПРИЛОЖЕНИЯ
+        // ==========================================
         const socket = io();
         let currentRoom = null;
-        let pNum = 1; 
-        let isSolo = true;
+        let playerNum = 1; 
 
-        const mapP1 = { UP: "ArrowUp", DOWN: "ArrowDown", LEFT: "ArrowLeft", RIGHT: "ArrowRight", A: "KeyX", START: "Enter" };
-        const mapP2 = { UP: "KeyW", DOWN: "KeyS", LEFT: "KeyA", RIGHT: "KeyD", A: "KeyF", START: "ShiftLeft" };
+        // Карта кнопок (индексы стандартного Gamepad API)
+        const btnMap = { UP: 12, DOWN: 13, LEFT: 14, RIGHT: 15, A: 0, START: 9 };
 
         window.app = {
             create: function() {
-                isSolo = false; pNum = 1;
+                playerNum = 1;
                 currentRoom = Math.random().toString(36).substring(2, 6).toUpperCase();
                 socket.emit('createRoom', currentRoom);
-                alert("Ваш ID комнаты: " + currentRoom + "\nЖдите соперника!");
+                alert("КОД КОМНАТЫ: " + currentRoom + "\nПередайте его другу!");
             },
             confirmJoin: function() {
-                const code = document.getElementById('input-id').value.toUpperCase();
-                if(code.length < 1) return;
-                isSolo = false; pNum = 2;
-                currentRoom = code;
+                currentRoom = document.getElementById('input-id').value.toUpperCase();
+                playerNum = 2;
                 socket.emit('joinRoom', currentRoom);
             },
-            startSolo: function() {
-                isSolo = true; pNum = 1;
-                this.load();
-            },
-            load: async function() {
+            load: function() {
                 document.getElementById('menu').style.display = 'none';
-                document.getElementById('modal-join').style.display = 'none';
+                document.getElementById('join-screen').style.display = 'none';
                 document.getElementById('game-overlay').style.display = 'flex';
-                document.getElementById('info').innerText = isSolo ? 'MODE: SOLO' : `ROOM: ${currentRoom} | YOU: P${pNum}`;
+                document.getElementById('room-info').innerText = `LOBBY: ${currentRoom} | PLAYER: ${playerNum}`;
 
                 window.EJS_player = '#game-container';
                 window.EJS_core = 'sega';
-                window.EJS_gameUrl = window.location.origin + '/battletoads.bin?v=' + Date.now();
+                window.EJS_gameUrl = window.location.origin + '/battletoads.bin';
                 window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
                 window.EJS_startOnLoaded = true;
 
-                // Включаем порт 2
-                window.EJS_onGameStart = function() {
-                    if (window.EJS_emulator && window.EJS_emulator.setSettings) {
-                        window.EJS_emulator.setSettings({ p2_type: 1 });
-                    }
+                // Насильно включаем второй порт при старте
+                window.EJS_onGameStart = () => {
+                    if(window.EJS_emulator) window.EJS_emulator.setSettings({ p2_type: 1 });
                 };
 
                 const s = document.createElement('script');
@@ -123,34 +128,25 @@
             }
         };
 
-        // Сервер сказал, что Игрок 2 зашел - СТАРТУЕМ
-        socket.on('syncStart', () => {
-            app.load();
-        });
+        socket.on('syncStart', () => app.load());
 
-        socket.on('systemError', (msg) => { alert(msg); });
-
-        function fire(code, isDown) {
-            const canvas = document.querySelector('canvas');
-            const event = new KeyboardEvent(isDown ? 'keydown' : 'keyup', { code: code, key: code, bubbles: true });
-            if (canvas) { canvas.focus(); canvas.dispatchEvent(event); }
-            document.dispatchEvent(event);
-        }
-
+        // Получаем нажатия от другого игрока (через "Виртуальный USB")
         socket.on('inputSync', (data) => {
-            if (isSolo) return;
-            const targetMap = (data.player === 1) ? mapP1 : mapP2;
-            fire(targetMap[data.btn], data.state);
+            const padIdx = data.player - 1;
+            const btnIdx = btnMap[data.btn];
+            virtualPads[padIdx].buttons[btnIdx] = { pressed: data.state, value: data.state ? 1 : 0 };
         });
 
+        // Отправка своих нажатий
         function bind(id, k) {
             const el = document.getElementById(id);
-            const handle = (d) => {
-                const myMap = (pNum === 1) ? mapP1 : mapP2;
-                fire(myMap[k], d);
-                if(!isSolo && currentRoom) {
-                    socket.emit('inputSync', { roomId: currentRoom, player: pNum, btn: k, state: d });
-                }
+            const handle = (isDown) => {
+                const myIdx = playerNum - 1;
+                const bIdx = btnMap[k];
+                // 1. Нажимаем у себя в виртуальном джойстике
+                virtualPads[myIdx].buttons[bIdx] = { pressed: isDown, value: isDown ? 1 : 0 };
+                // 2. Отправляем в сеть
+                if(currentRoom) socket.emit('inputSync', { roomId: currentRoom, player: playerNum, btn: k, state: isDown });
             };
             el.onpointerdown = (e) => { e.preventDefault(); handle(true); if(window.Telegram) Telegram.WebApp.HapticFeedback.impactOccurred('medium'); };
             el.onpointerup = (e) => { e.preventDefault(); handle(false); };
