@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Pixel Arena Elite</title>
+    <title>Pixel Arena Final</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="/socket.io/socket.io.js"></script>
@@ -14,59 +14,30 @@
         #game-container { width: 100% !important; height: 100% !important; }
         .ctrl-btn { width: 65px; height: 65px; background: #1a1a1a; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; border: 2px solid #333; touch-action: none; color: #0f0; }
         .ctrl-btn:active { background: #00f0ff; color: #000; transform: scale(0.9); }
-        #status-log { position: fixed; top: 0; left: 0; width: 100%; background: rgba(0,0,0,0.7); color: #0f0; font-size: 9px; padding: 4px; z-index: 10001; pointer-events: none; border-bottom: 1px solid #0f0; }
+        #status-bar { position: fixed; top: 0; left: 0; width: 100%; background: rgba(0,255,0,0.2); color: #0f0; font-size: 9px; padding: 4px; z-index: 10001; pointer-events: none; text-align: center; }
     </style>
 </head>
 <body class="flex flex-col h-screen">
 
-    <div id="status-log">Система: Готова к запуску</div>
+    <div id="status-bar">Система: Ожидание выбора игры</div>
 
-    <!-- МЕНЮ ВЫБОРА -->
     <main id="menu" class="flex-1 p-6 flex flex-col items-center justify-center space-y-8 bg-zinc-950">
-        <div class="text-center">
-            <h1 class="text-cyan-500 text-4xl font-black italic tracking-tighter uppercase">PIXEL ARENA</h1>
-            <p class="text-zinc-600 text-[10px] tracking-[0.3em]">REVERSE ENGINEERED SEGA</p>
-        </div>
+        <h1 class="text-cyan-500 text-3xl font-black italic tracking-tighter uppercase">PIXEL ARENA</h1>
         
-        <div class="bg-zinc-900 p-8 rounded-[2.5rem] border border-zinc-800 space-y-6 w-full max-w-sm text-center shadow-2xl">
-            <div class="text-6xl mb-4">🐸</div>
-            <h4 class="text-white font-bold uppercase text-xl">Battletoads</h4>
-            
-            <div class="flex flex-col gap-4">
-                <button onclick="app.init('battletoads.bin', true)" class="bg-white text-black font-black py-4 rounded-2xl uppercase text-xs shadow-xl active:scale-95 transition-all">
-                    Одиночная игра (Solo)
-                </button>
-                
-                <div class="flex gap-2">
-                    <button onclick="app.init('battletoads.bin', false, 1)" class="bg-cyan-500 text-black font-black py-4 rounded-2xl flex-1 text-[10px] uppercase shadow-lg shadow-cyan-500/20 active:scale-95 transition-all">
-                        Создать Лобби
-                    </button>
-                    <button onclick="app.openJoin()" class="bg-zinc-800 font-bold py-4 rounded-2xl flex-1 text-[10px] uppercase text-white border border-zinc-700 active:scale-95 transition-all">
-                        Войти P2
-                    </button>
-                </div>
-            </div>
+        <div class="bg-zinc-900 p-8 rounded-3xl border border-zinc-800 space-y-6 w-full max-w-sm text-center shadow-2xl">
+            <div class="text-5xl">🐸</div>
+            <h4 class="text-white font-bold uppercase text-lg">Battletoads</h4>
+            <button onclick="app.loadGame('battletoads.bin')" class="bg-cyan-500 text-black font-black py-4 rounded-2xl w-full uppercase text-xs shadow-lg active:scale-95 transition-all">
+                ИГРАТЬ (SOLO)
+            </button>
+            <p class="text-zinc-600 text-[8px] uppercase">Убедись, что файл ROM настоящий (512 КБ)</p>
         </div>
     </main>
 
-    <!-- МОДАЛКА JOIN -->
-    <div id="join-modal" class="hidden fixed inset-0 bg-black/98 z-[5000] flex items-center justify-center p-6">
-        <div class="bg-zinc-900 p-8 rounded-[2.5rem] border border-cyan-500/30 w-full max-w-xs text-center shadow-2xl">
-            <h3 class="text-white font-bold mb-2 uppercase text-sm">Вход в комнату</h3>
-            <input id="lobby-input" type="text" class="w-full bg-black border border-white/10 p-5 rounded-2xl text-white text-center font-bold text-3xl tracking-[0.2em] uppercase mb-6 outline-none focus:border-cyan-500" maxlength="4" placeholder="0000">
-            <button id="confirm-join" class="w-full bg-cyan-500 text-black font-black py-4 rounded-2xl uppercase shadow-lg shadow-cyan-500/20">Подключиться</button>
-            <button onclick="document.getElementById('join-modal').classList.add('hidden')" class="mt-4 text-zinc-600 text-xs uppercase font-bold">Назад</button>
-        </div>
-    </div>
-
-    <!-- ИГРОВОЙ ЭКРАН -->
     <div id="game-overlay">
-        <div class="h-12 bg-zinc-950 border-b border-cyan-900/50 flex justify-between items-center px-4">
-            <div class="flex items-center gap-2">
-                <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_8px_#22c55e]"></div>
-                <span id="session-tag" class="text-[10px] font-bold text-white uppercase tracking-widest">Live</span>
-            </div>
-            <button onclick="location.reload()" class="bg-red-900/20 text-red-500 text-[8px] px-4 py-1.5 rounded-full font-bold uppercase border border-red-900/50">Выход</button>
+        <div class="h-10 bg-zinc-950 border-b border-cyan-900/50 flex justify-between items-center px-4">
+            <span class="text-[10px] font-bold text-white uppercase tracking-widest">LIVE SESSION</span>
+            <button onclick="location.reload()" class="text-red-500 text-[8px] font-bold uppercase">ВЫХОД</button>
         </div>
 
         <div id="emulator-wrapper">
@@ -78,72 +49,48 @@
                 <div class="grid grid-cols-3 gap-2">
                     <div></div><button class="ctrl-btn" id="btn-up">▲</button><div></div>
                     <button class="ctrl-btn" id="btn-left">◀</button>
-                    <div class="w-12 h-12 bg-zinc-900 rounded-full border-2 border-zinc-800 flex items-center justify-center">
-                        <div class="w-2 h-2 bg-cyan-500/20 rounded-full"></div>
-                    </div>
+                    <div class="w-12 h-12 bg-zinc-900 rounded-full border-2 border-zinc-800"></div>
                     <button class="ctrl-btn" id="btn-right">▶</button><div></div>
                     <button class="ctrl-btn" id="btn-down">▼</button><div></div>
                 </div>
                 <div class="flex flex-col gap-6 items-center">
-                    <button class="ctrl-btn bg-red-600 border-red-500 text-white font-bold text-2xl shadow-lg shadow-red-600/20" id="btn-a">A</button>
-                    <button class="bg-zinc-800 py-3 px-8 rounded-2xl text-[10px] font-bold text-white border border-zinc-700 uppercase tracking-widest active:bg-zinc-700" id="btn-start">Start</button>
+                    <button class="ctrl-btn bg-red-600 border-red-500 text-white font-bold text-2xl shadow-lg" id="btn-a">A</button>
+                    <button class="bg-zinc-800 py-3 px-8 rounded-2xl text-[10px] font-bold text-white border border-zinc-700 uppercase tracking-widest" id="btn-start">Start</button>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        const socket = io();
-        const logBox = document.getElementById('status-log');
-        function setStatus(m) { document.getElementById('status-log').innerText = "Система: " + m; }
-
-        let room = null;
-        let pNum = 1;
-        let isSolo = true;
-
-        const keys = { UP: "ArrowUp", DOWN: "ArrowDown", LEFT: "ArrowLeft", RIGHT: "ArrowRight", A: "KeyX", START: "Enter" };
+        const statusBar = document.getElementById('status-bar');
+        function log(m) { statusBar.innerText = "Система: " + m; }
 
         window.app = {
-            init: function(rom, solo, p = 1) {
-                isSolo = solo;
-                pNum = p;
-                if (!isSolo) {
-                    room = Math.random().toString(36).substring(2, 6).toUpperCase();
-                    socket.emit('createRoom', room);
-                    document.getElementById('session-tag').innerText = `LOBBY: ${room}`;
-                    setStatus(`Комната ${room} создана`);
-                } else {
-                    document.getElementById('session-tag').innerText = `SOLO MODE`;
-                    setStatus(`Запуск соло...`);
-                }
-                this.load(rom);
-            },
-            openJoin: function() {
-                document.getElementById('join-modal').classList.remove('hidden');
-                document.getElementById('confirm-join').onclick = () => {
-                    const code = document.getElementById('lobby-input').value.toUpperCase();
-                    if(!code) return;
-                    room = code; pNum = 2; isSolo = false;
-                    socket.emit('joinRoom', room);
-                    document.getElementById('join-modal').classList.add('hidden');
-                    this.load('battletoads.bin');
-                };
-            },
-            load: function(romFile) {
+            loadGame: async function(romFile) {
                 document.getElementById('menu').style.display = 'none';
                 document.getElementById('game-overlay').style.display = 'flex';
+                log("Загрузка бинарного файла...");
 
-                window.EJS_player = '#game-container';
-                window.EJS_core = 'sega';
-                // Ссылка на файл
-                window.EJS_gameUrl = window.location.origin + '/' + romFile;
-                window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
-                window.EJS_startOnLoaded = true;
+                try {
+                    // Прямое скачивание файла
+                    const response = await fetch(window.location.origin + '/' + romFile);
+                    if (!response.ok) throw new Error("Файл не найден на сервере");
+                    
+                    const blob = await response.blob();
+                    log("Файл скачан (" + blob.size + " байт). Запуск ядра...");
 
-                const s = document.createElement('script');
-                s.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
-                s.onload = () => setStatus("Эмулятор готов! Жми START");
-                document.body.appendChild(s);
+                    window.EJS_player = '#game-container';
+                    window.EJS_core = 'sega';
+                    window.EJS_gameUrl = URL.createObjectURL(blob); // Передаем скачанный файл как объект
+                    window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
+                    window.EJS_startOnLoaded = true;
+
+                    const s = document.createElement('script');
+                    s.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
+                    document.body.appendChild(s);
+                } catch (e) {
+                    log("ОШИБКА: " + e.message);
+                }
             }
         };
 
@@ -156,36 +103,14 @@
             if (canvas) { canvas.focus(); canvas.dispatchEvent(event); }
         }
 
-        socket.on('inputSync', (data) => {
-            if(!isSolo && data.player !== pNum) {
-                const maps = [
-                    { UP: "ArrowUp", DOWN: "ArrowDown", LEFT: "ArrowLeft", RIGHT: "ArrowRight", A: "KeyX", START: "Enter" },
-                    { UP: "KeyW", DOWN: "KeyS", LEFT: "KeyA", RIGHT: "KeyD", A: "KeyJ", START: "Space" }
-                ];
-                fireKey(maps[data.player-1][data.btn], data.state);
-            }
-        });
-
         function bind(id, k) {
             const el = document.getElementById(id);
-            const handle = (d) => {
-                const maps = [
-                    { UP: "ArrowUp", DOWN: "ArrowDown", LEFT: "ArrowLeft", RIGHT: "ArrowRight", A: "KeyX", START: "Enter" },
-                    { UP: "KeyW", DOWN: "KeyS", LEFT: "KeyA", RIGHT: "KeyD", A: "KeyJ", START: "Space" }
-                ];
-                fireKey(maps[pNum-1][k], d);
-                if(!isSolo && room) {
-                    socket.emit('inputSync', { roomId: room, player: pNum, btn: k, state: d });
-                }
-            };
-            el.onpointerdown = (e) => { 
-                e.preventDefault(); handle(true); 
-                if (window.Telegram && window.Telegram.WebApp) window.Telegram.WebApp.HapticFeedback.impactOccurred('medium');
-            };
-            el.onpointerup = (e) => { e.preventDefault(); handle(false); };
+            el.onpointerdown = (e) => { e.preventDefault(); fireKey(k, true); };
+            el.onpointerup = (e) => { e.preventDefault(); fireKey(k, false); };
         }
-        bind('btn-up', 'UP'); bind('btn-down', 'DOWN'); bind('btn-left', 'LEFT'); bind('btn-right', 'RIGHT');
-        bind('btn-a', 'A'); bind('btn-start', 'START');
+        
+        const keys = { "btn-up": "ArrowUp", "btn-down": "ArrowDown", "btn-left": "ArrowLeft", "btn-right": "ArrowRight", "btn-a": "KeyX", "btn-start": "Enter" };
+        Object.keys(keys).forEach(id => bind(id, keys[id]));
     </script>
 </body>
 </html>
