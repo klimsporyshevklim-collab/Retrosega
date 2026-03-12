@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Battletoads Netplay Arena</title>
+    <title>Battletoads 2-Player Fixed</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="/socket.io/socket.io.js"></script>
@@ -12,29 +12,30 @@
         #game-overlay { position: fixed; inset: 0; background: #000; z-index: 1000; display: none; flex-direction: column; }
         #emulator-wrapper { width: 100vw; height: 50vh !important; background: #111; }
         #game-container { width: 100% !important; height: 100% !important; }
-        .ctrl-btn { width: 60px; height: 60px; background: #222; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; border: 1px solid #444; touch-action: none; }
+        .ctrl-btn { width: 65px; height: 65px; background: #222; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; border: 2px solid #444; touch-action: none; }
         .ctrl-btn:active { background: #00f0ff; color: #000; }
-        #waiting-screen { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 2000; display: none; flex-direction: column; align-items: center; justify-content: center; }
+        #waiting-screen { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 2000; display: none; flex-direction: column; align-items: center; justify-content: center; }
     </style>
 </head>
 <body class="flex flex-col h-screen">
 
     <div id="waiting-screen">
-        <div class="text-cyan-400 text-xl animate-pulse mb-4">ОЖИДАНИЕ ИГРОКА 2...</div>
-        <div id="display-room-id" class="text-white text-3xl font-bold tracking-widest">----</div>
+        <div class="text-cyan-400 text-xl animate-pulse mb-4 font-bold">ОЖИДАНИЕ ИГРОКА 2...</div>
+        <div class="text-white text-xs mb-2 uppercase">Сообщите этот код другу:</div>
+        <div id="display-room-id" class="text-white text-4xl font-black tracking-widest border-2 border-cyan-400 p-4 rounded-xl">----</div>
     </div>
 
     <!-- МЕНЮ -->
     <main id="menu" class="flex-1 p-6 flex flex-col items-center justify-center space-y-6 bg-zinc-950">
-        <h1 class="text-cyan-400 text-3xl font-black italic uppercase text-center">PIXEL ARENA</h1>
+        <h1 class="text-cyan-400 text-3xl font-black italic uppercase text-center tracking-tighter">PIXEL ARENA</h1>
         <div class="bg-zinc-900 p-8 rounded-3xl border border-zinc-800 w-full max-w-sm text-center shadow-2xl space-y-6">
             <div class="text-6xl">🐸</div>
             <h4 class="text-white font-bold uppercase text-lg">Battletoads</h4>
             <div class="flex flex-col gap-3">
-                <button onclick="app.start(true)" class="bg-white text-black font-black py-3 rounded-xl uppercase text-xs">Одиночная игра</button>
+                <button onclick="app.start(true)" class="bg-white text-black font-black py-4 rounded-xl uppercase text-xs">Одиночная игра</button>
                 <div class="flex gap-2">
-                    <button onclick="app.createLobby()" class="bg-cyan-500 text-black font-black py-3 rounded-xl flex-1 text-[10px]">СОЗДАТЬ ЛОББИ</button>
-                    <button onclick="app.joinLobby()" class="bg-red-600 font-bold py-3 rounded-xl flex-1 text-[10px] text-white">ВХОД P2</button>
+                    <button onclick="app.createLobby()" class="bg-cyan-500 text-black font-black py-4 rounded-xl flex-1 text-[10px]">СОЗДАТЬ ЛОББИ</button>
+                    <button onclick="app.joinLobby()" class="bg-red-600 font-bold py-4 rounded-xl flex-1 text-[10px] text-white">ВХОД P2</button>
                 </div>
             </div>
         </div>
@@ -43,8 +44,8 @@
     <!-- ИГРОВОЙ ЭКРАН -->
     <div id="game-overlay">
         <div class="h-10 bg-zinc-950 border-b border-cyan-500/20 flex justify-between items-center px-4 text-[10px]">
-            <span id="room-tag" class="text-cyan-400 font-bold"></span>
-            <button onclick="location.reload()" class="text-red-500 uppercase">Выход</button>
+            <span id="room-tag" class="text-cyan-400 font-bold uppercase tracking-widest"></span>
+            <button onclick="location.reload()" class="bg-red-900/20 text-red-500 px-3 py-1 rounded-full font-bold uppercase border border-red-900/50">Выход</button>
         </div>
         <div id="emulator-wrapper"><div id="game-container"></div></div>
         <div class="flex-1 bg-zinc-950 p-4 flex flex-col justify-around items-center">
@@ -52,13 +53,13 @@
                 <div class="grid grid-cols-3 gap-2">
                     <div></div><button class="ctrl-btn" id="btn-up">▲</button><div></div>
                     <button class="ctrl-btn" id="btn-left">◀</button>
-                    <div class="w-10 h-10 bg-zinc-900 rounded-full border border-zinc-800"></div>
+                    <div class="w-12 h-12 bg-zinc-900 rounded-full border-2 border-zinc-800"></div>
                     <button class="ctrl-btn" id="btn-right">▶</button><div></div>
                     <button class="ctrl-btn" id="btn-down">▼</button><div></div>
                 </div>
                 <div class="flex flex-col gap-6">
                     <button class="ctrl-btn bg-red-600 border-red-400 text-white font-bold" id="btn-a">A</button>
-                    <button class="bg-zinc-800 py-2 px-4 rounded text-[10px] font-bold text-white uppercase" id="btn-start">Start</button>
+                    <button class="bg-zinc-800 py-3 px-6 rounded-xl text-[10px] font-bold text-white uppercase border border-zinc-700" id="btn-start">Start</button>
                 </div>
             </div>
         </div>
@@ -67,23 +68,24 @@
     <script>
         const socket = io();
         let currentRoom = null;
-        let isPlayer1 = true;
+        let playerNum = 1; 
         let isSolo = true;
 
-        // Маппинг клавиш: P1 (Host) и P2 (Guest)
-        // Игрок 2 использует стандартные доп. клавиши для Sega ядер
+        // Раскладка кнопок
+        // P1 = Классика (Стрелки, X, Enter)
         const mapP1 = { UP: "ArrowUp", DOWN: "ArrowDown", LEFT: "ArrowLeft", RIGHT: "ArrowRight", A: "KeyX", START: "Enter" };
-        const mapP2 = { UP: "KeyI", DOWN: "KeyK", LEFT: "KeyJ", RIGHT: "KeyL", A: "KeyF", START: "KeyV" };
+        // P2 = Раскладка WASD (EmulatorJS понимает это как второй джойстик в порту 2)
+        const mapP2 = { UP: "KeyW", DOWN: "KeyS", LEFT: "KeyA", RIGHT: "KeyD", A: "KeyF", START: "ShiftLeft" };
 
         window.app = {
             start: function(solo) {
                 isSolo = solo;
-                isPlayer1 = true;
+                playerNum = 1;
                 this.load();
             },
             createLobby: function() {
                 isSolo = false;
-                isPlayer1 = true;
+                playerNum = 1;
                 currentRoom = Math.random().toString(36).substring(2, 6).toUpperCase();
                 document.getElementById('display-room-id').innerText = currentRoom;
                 document.getElementById('waiting-screen').style.display = 'flex';
@@ -93,7 +95,7 @@
                 const code = prompt("Введите ID комнаты (4 знака):");
                 if (!code) return;
                 isSolo = false;
-                isPlayer1 = false;
+                playerNum = 2;
                 currentRoom = code.toUpperCase();
                 socket.emit('joinRoom', currentRoom);
             },
@@ -101,7 +103,7 @@
                 document.getElementById('menu').style.display = 'none';
                 document.getElementById('waiting-screen').style.display = 'none';
                 document.getElementById('game-overlay').style.display = 'flex';
-                document.getElementById('room-tag').innerText = isSolo ? 'SOLO' : `ROOM: ${currentRoom} (P${isPlayer1 ? '1' : '2'})`;
+                document.getElementById('room-tag').innerText = isSolo ? 'SOLO MODE' : `LOBBY: ${currentRoom} | YOU: P${playerNum}`;
 
                 try {
                     const res = await fetch(window.location.origin + '/battletoads.bin');
@@ -116,11 +118,10 @@
                     const s = document.createElement('script');
                     s.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
                     document.body.appendChild(s);
-                } catch (e) { alert("Ошибка загрузки данных"); }
+                } catch (e) { alert("Ошибка загрузки"); }
             }
         };
 
-        // Ждем сигнала от сервера для одновременного старта
         socket.on('syncStart', () => {
             app.load();
         });
@@ -128,28 +129,34 @@
         function fireKey(code, isDown) {
             const canvas = document.querySelector('canvas');
             const event = new KeyboardEvent(isDown ? 'keydown' : 'keyup', { code: code, key: code, bubbles: true });
+            document.dispatchEvent(event);
             if (canvas) {
                 canvas.focus();
                 canvas.dispatchEvent(event);
             }
-            document.dispatchEvent(event);
         }
 
         socket.on('inputSync', (data) => {
-            const map = (data.player === 1) ? mapP1 : mapP2;
-            fireKey(map[data.btn], data.state);
+            if (!isSolo && data.player !== playerNum) {
+                const targetMap = (data.player === 1) ? mapP1 : mapP2;
+                fireKey(targetMap[data.btn], data.state);
+            }
         });
 
         function bind(id, btnName) {
             const el = document.getElementById(id);
             const handle = (isDown) => {
-                const myMap = isPlayer1 ? mapP1 : mapP2;
-                fireKey(myMap[btnName], isDown);
+                const myMap = (playerNum === 1) ? mapP1 : mapP2;
+                fireKey(myMap[btnName], isDown); // Нажимаем у себя
+                
                 if (!isSolo && currentRoom) {
-                    socket.emit('inputSync', { roomId: currentRoom, player: isPlayer1 ? 1 : 2, btn: btnName, state: isDown });
+                    socket.emit('inputSync', { roomId: currentRoom, player: playerNum, btn: btnName, state: isDown });
                 }
             };
-            el.onpointerdown = (e) => { e.preventDefault(); handle(true); if(window.Telegram) Telegram.WebApp.HapticFeedback.impactOccurred('light'); };
+            el.onpointerdown = (e) => { 
+                e.preventDefault(); handle(true); 
+                if(window.Telegram) Telegram.WebApp.HapticFeedback.impactOccurred('light'); 
+            };
             el.onpointerup = (e) => { e.preventDefault(); handle(false); };
         }
 
