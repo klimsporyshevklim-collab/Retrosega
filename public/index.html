@@ -3,61 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Pixel Arena Netplay</title>
+    <title>Battletoads Netplay Arena</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="/socket.io/socket.io.js"></script>
     <style>
         body { background: #000; color: #fff; font-family: monospace; margin: 0; overflow: hidden; }
         #game-overlay { position: fixed; inset: 0; background: #000; z-index: 1000; display: none; flex-direction: column; }
-        #emulator-wrapper { width: 100vw; height: 50vh !important; background: #111; position: relative; }
+        #emulator-wrapper { width: 100vw; height: 50vh !important; background: #111; }
         #game-container { width: 100% !important; height: 100% !important; }
         .ctrl-btn { width: 60px; height: 60px; background: #222; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; border: 1px solid #444; touch-action: none; }
         .ctrl-btn:active { background: #00f0ff; color: #000; }
-        #status-bar { position: fixed; top: 0; left: 0; width: 100%; background: rgba(0,255,0,0.2); color: #0f0; font-size: 8px; padding: 4px; z-index: 10001; text-align: center; }
+        #waiting-screen { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 2000; display: none; flex-direction: column; align-items: center; justify-content: center; }
     </style>
 </head>
 <body class="flex flex-col h-screen">
 
-    <div id="status-bar">Система готова</div>
+    <div id="waiting-screen">
+        <div class="text-cyan-400 text-xl animate-pulse mb-4">ОЖИДАНИЕ ИГРОКА 2...</div>
+        <div id="display-room-id" class="text-white text-3xl font-bold tracking-widest">----</div>
+    </div>
 
     <!-- МЕНЮ -->
     <main id="menu" class="flex-1 p-6 flex flex-col items-center justify-center space-y-6 bg-zinc-950">
         <h1 class="text-cyan-400 text-3xl font-black italic uppercase text-center">PIXEL ARENA</h1>
-        
         <div class="bg-zinc-900 p-8 rounded-3xl border border-zinc-800 w-full max-w-sm text-center shadow-2xl space-y-6">
             <div class="text-6xl">🐸</div>
             <h4 class="text-white font-bold uppercase text-lg">Battletoads</h4>
-            
             <div class="flex flex-col gap-3">
-                <button onclick="app.start('battletoads.bin', true)" class="bg-white text-black font-black py-3 rounded-xl uppercase text-xs">Одиночная игра</button>
+                <button onclick="app.start(true)" class="bg-white text-black font-black py-3 rounded-xl uppercase text-xs">Одиночная игра</button>
                 <div class="flex gap-2">
-                    <button onclick="app.start('battletoads.bin', false, 1)" class="bg-cyan-500 text-black font-black py-3 rounded-xl flex-1 text-[10px]">СОЗДАТЬ ЛОББИ</button>
-                    <button onclick="app.showJoin()" class="bg-red-600 font-bold py-3 rounded-xl flex-1 text-[10px] text-white">ВОЙТИ P2</button>
+                    <button onclick="app.createLobby()" class="bg-cyan-500 text-black font-black py-3 rounded-xl flex-1 text-[10px]">СОЗДАТЬ ЛОББИ</button>
+                    <button onclick="app.joinLobby()" class="bg-red-600 font-bold py-3 rounded-xl flex-1 text-[10px] text-white">ВХОД P2</button>
                 </div>
             </div>
         </div>
     </main>
 
-    <!-- МОДАЛКА ВХОДА -->
-    <div id="join-modal" class="hidden fixed inset-0 bg-black/95 z-[5000] flex items-center justify-center p-6">
-        <div class="bg-zinc-900 p-8 rounded-3xl border border-cyan-500/50 w-full max-w-xs text-center text-white">
-            <h3 class="font-bold mb-4 uppercase text-xs">Введите ID Хоста</h3>
-            <input id="lobby-input" type="text" class="w-full bg-black border border-white/10 p-3 rounded text-center font-bold uppercase mb-4 outline-none" maxlength="4">
-            <button id="btn-submit-join" class="w-full bg-cyan-500 text-black font-black py-3 rounded uppercase">Подключиться</button>
-        </div>
-    </div>
-
     <!-- ИГРОВОЙ ЭКРАН -->
     <div id="game-overlay">
-        <div class="h-10 bg-zinc-950 border-b border-cyan-500/20 flex justify-between items-center px-4">
-            <span id="game-tag" class="text-[9px] font-bold text-cyan-400 uppercase">Sega Session</span>
-            <button onclick="location.reload()" class="bg-red-900/20 text-red-500 text-[8px] px-3 py-1 rounded-full font-bold uppercase">Выход</button>
+        <div class="h-10 bg-zinc-950 border-b border-cyan-500/20 flex justify-between items-center px-4 text-[10px]">
+            <span id="room-tag" class="text-cyan-400 font-bold"></span>
+            <button onclick="location.reload()" class="text-red-500 uppercase">Выход</button>
         </div>
         <div id="emulator-wrapper"><div id="game-container"></div></div>
-        
-        <div class="flex-1 bg-zinc-950 p-4 flex flex-col justify-around">
-            <div class="flex justify-between items-center w-full max-w-sm mx-auto">
+        <div class="flex-1 bg-zinc-950 p-4 flex flex-col justify-around items-center">
+            <div class="flex justify-between items-center w-full max-w-sm">
                 <div class="grid grid-cols-3 gap-2">
                     <div></div><button class="ctrl-btn" id="btn-up">▲</button><div></div>
                     <button class="ctrl-btn" id="btn-left">◀</button>
@@ -76,46 +67,46 @@
     <script>
         const socket = io();
         let currentRoom = null;
-        let playerNum = 1; // Мы Игрок 1 или Игрок 2
-        let isSoloMode = true;
+        let isPlayer1 = true;
+        let isSolo = true;
 
-        // Коды клавиш для эмулятора (Sega)
-        // Игрок 1: Стрелки + X
+        // Маппинг клавиш: P1 (Host) и P2 (Guest)
+        // Игрок 2 использует стандартные доп. клавиши для Sega ядер
         const mapP1 = { UP: "ArrowUp", DOWN: "ArrowDown", LEFT: "ArrowLeft", RIGHT: "ArrowRight", A: "KeyX", START: "Enter" };
-        // Игрок 2: WASD + J (Sega core обычно видит их как второй джойстик)
-        const mapP2 = { UP: "KeyW", DOWN: "KeyS", LEFT: "KeyA", RIGHT: "KeyD", A: "KeyJ", START: "Space" };
+        const mapP2 = { UP: "KeyI", DOWN: "KeyK", LEFT: "KeyJ", RIGHT: "KeyL", A: "KeyF", START: "KeyV" };
 
         window.app = {
-            start: function(rom, solo, p = 1) {
-                isSoloMode = solo;
-                playerNum = p;
-                if (!isSoloMode) {
-                    currentRoom = Math.random().toString(36).substring(2, 6).toUpperCase();
-                    socket.emit('createRoom', currentRoom);
-                    document.getElementById('game-tag').innerText = `ROOM: ${currentRoom}`;
-                } else {
-                    document.getElementById('game-tag').innerText = `SOLO PLAY`;
-                }
-                this.load(rom);
+            start: function(solo) {
+                isSolo = solo;
+                isPlayer1 = true;
+                this.load();
             },
-            showJoin: function() {
-                document.getElementById('join-modal').classList.remove('hidden');
-                document.getElementById('btn-submit-join').onclick = () => {
-                    const code = document.getElementById('lobby-input').value.toUpperCase();
-                    if(!code) return;
-                    currentRoom = code; playerNum = 2; isSoloMode = false;
-                    socket.emit('joinRoom', currentRoom);
-                    document.getElementById('join-modal').classList.add('hidden');
-                    this.load('battletoads.bin');
-                };
+            createLobby: function() {
+                isSolo = false;
+                isPlayer1 = true;
+                currentRoom = Math.random().toString(36).substring(2, 6).toUpperCase();
+                document.getElementById('display-room-id').innerText = currentRoom;
+                document.getElementById('waiting-screen').style.display = 'flex';
+                socket.emit('createRoom', currentRoom);
             },
-            load: async function(romFile) {
+            joinLobby: function() {
+                const code = prompt("Введите ID комнаты (4 знака):");
+                if (!code) return;
+                isSolo = false;
+                isPlayer1 = false;
+                currentRoom = code.toUpperCase();
+                socket.emit('joinRoom', currentRoom);
+            },
+            load: async function() {
                 document.getElementById('menu').style.display = 'none';
+                document.getElementById('waiting-screen').style.display = 'none';
                 document.getElementById('game-overlay').style.display = 'flex';
+                document.getElementById('room-tag').innerText = isSolo ? 'SOLO' : `ROOM: ${currentRoom} (P${isPlayer1 ? '1' : '2'})`;
 
                 try {
-                    const res = await fetch(window.location.origin + '/' + romFile);
+                    const res = await fetch(window.location.origin + '/battletoads.bin');
                     const blob = await res.blob();
+                    
                     window.EJS_player = '#game-container';
                     window.EJS_core = 'sega';
                     window.EJS_gameUrl = URL.createObjectURL(blob);
@@ -125,39 +116,40 @@
                     const s = document.createElement('script');
                     s.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
                     document.body.appendChild(s);
-                } catch (e) { alert("Ошибка загрузки"); }
+                } catch (e) { alert("Ошибка загрузки данных"); }
             }
         };
 
-        // Функция нажатия клавиши в эмуляторе
+        // Ждем сигнала от сервера для одновременного старта
+        socket.on('syncStart', () => {
+            app.load();
+        });
+
         function fireKey(code, isDown) {
             const canvas = document.querySelector('canvas');
             const event = new KeyboardEvent(isDown ? 'keydown' : 'keyup', { code: code, key: code, bubbles: true });
+            if (canvas) {
+                canvas.focus();
+                canvas.dispatchEvent(event);
+            }
             document.dispatchEvent(event);
-            if (canvas) { canvas.focus(); canvas.dispatchEvent(event); }
         }
 
-        // Прием нажатий от другого игрока
         socket.on('inputSync', (data) => {
-            if (!isSoloMode && data.player !== playerNum) {
-                const otherMap = (data.player === 1) ? mapP1 : mapP2;
-                fireKey(otherMap[data.btn], data.state);
-            }
+            const map = (data.player === 1) ? mapP1 : mapP2;
+            fireKey(map[data.btn], data.state);
         });
 
-        // Привязка кнопок джойстика
         function bind(id, btnName) {
             const el = document.getElementById(id);
             const handle = (isDown) => {
-                const myMap = (playerNum === 1) ? mapP1 : mapP2;
-                fireKey(myMap[btnName], isDown); // Нажимаем у себя
-                
-                // Отправляем другому игроку
-                if (!isSoloMode && currentRoom) {
-                    socket.emit('inputSync', { roomId: currentRoom, player: playerNum, btn: btnName, state: isDown });
+                const myMap = isPlayer1 ? mapP1 : mapP2;
+                fireKey(myMap[btnName], isDown);
+                if (!isSolo && currentRoom) {
+                    socket.emit('inputSync', { roomId: currentRoom, player: isPlayer1 ? 1 : 2, btn: btnName, state: isDown });
                 }
             };
-            el.onpointerdown = (e) => { e.preventDefault(); handle(true); };
+            el.onpointerdown = (e) => { e.preventDefault(); handle(true); if(window.Telegram) Telegram.WebApp.HapticFeedback.impactOccurred('light'); };
             el.onpointerup = (e) => { e.preventDefault(); handle(false); };
         }
 
