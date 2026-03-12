@@ -3,45 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Pixel Arena Final</title>
+    <title>Pixel Arena v10.0</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="/socket.io/socket.io.js"></script>
     <style>
         body { background: #000; color: #fff; font-family: monospace; margin: 0; overflow: hidden; }
         #game-overlay { position: fixed; inset: 0; background: #000; z-index: 1000; display: none; flex-direction: column; }
-        #emulator-wrapper { width: 100vw; height: 50vh !important; background: #111; position: relative; }
+        #emulator-wrapper { width: 100vw; height: 48vh !important; background: #111; position: relative; }
         #game-container { width: 100% !important; height: 100% !important; }
-        .ctrl-btn { width: 65px; height: 65px; background: #222; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; border: 2px solid #444; touch-action: none; }
+        .ctrl-btn { width: 60px; height: 60px; background: #222; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; border: 2px solid #444; touch-action: none; }
         .ctrl-btn:active { background: #444; transform: scale(0.9); }
     </style>
 </head>
 <body class="flex flex-col h-screen">
 
-    <main id="menu" class="flex-1 p-6 space-y-6">
-        <h1 class="text-cyan-400 text-2xl font-bold italic tracking-tighter uppercase text-center">Pixel Arena</h1>
-        <div class="bg-zinc-900 p-6 rounded-2xl border border-zinc-800 text-center space-y-4 shadow-2xl">
-            <div class="text-4xl">🐸</div>
+    <main id="menu" class="flex-1 p-6 space-y-6 flex flex-col items-center justify-center">
+        <h1 class="text-cyan-400 text-3xl font-bold italic tracking-tighter uppercase mb-8">Pixel Arena</h1>
+        
+        <div class="bg-zinc-900 p-6 rounded-2xl border border-zinc-800 space-y-6 w-full max-w-sm text-center shadow-2xl">
+            <div class="text-5xl">🐸</div>
             <h4 class="text-white font-bold uppercase text-lg">Battletoads</h4>
             <div class="flex gap-4">
-                <button onclick="app.run('battletoads.bin', 1)" class="bg-cyan-500 text-black font-black py-4 rounded-xl flex-1 shadow-lg shadow-cyan-500/20">HOST LOBBY</button>
-                <button onclick="app.showJoin('battletoads.bin')" class="bg-red-600 font-bold py-4 rounded-xl flex-1 text-white">JOIN P2</button>
+                <button onclick="app.run('battletoads.md', 1)" class="bg-cyan-500 text-black font-black py-4 rounded-xl flex-1 shadow-lg shadow-cyan-500/20 text-xs">HOST LOBBY</button>
+                <button onclick="app.showJoin()" class="bg-red-600 font-bold py-4 rounded-xl flex-1 text-white text-xs">JOIN P2</button>
             </div>
         </div>
     </main>
 
-    <div id="join-modal" class="hidden fixed inset-0 bg-black/95 z-[5000] flex items-center justify-center p-6">
-        <div class="bg-zinc-900 p-6 rounded-2xl border border-cyan-500/50 w-full max-w-xs text-center text-white">
-            <h3 class="font-bold mb-4 uppercase text-xs">Enter Host ID</h3>
-            <input id="lobby-input" type="text" class="w-full bg-black border border-white/20 p-3 rounded text-center font-bold uppercase mb-4 outline-none">
-            <button id="btn-submit-join" class="w-full bg-cyan-500 text-black font-black py-3 rounded">CONNECT</button>
+    <div id="join-modal" class="hidden fixed inset-0 bg-black/95 z-[5000] flex items-center justify-center p-6 text-white">
+        <div class="bg-zinc-900 p-6 rounded-2xl border border-cyan-500/50 w-full max-w-xs text-center">
+            <h3 class="font-bold mb-4 uppercase text-xs tracking-widest">Enter Host ID</h3>
+            <input id="lobby-input" type="text" class="w-full bg-black border border-white/20 p-3 rounded text-center font-bold uppercase mb-4 outline-none" maxlength="4">
+            <button id="btn-submit-join" class="w-full bg-cyan-500 text-black font-black py-3 rounded uppercase">Connect</button>
         </div>
     </div>
 
     <div id="game-overlay">
         <div class="h-10 bg-zinc-950 border-b border-cyan-500/20 flex justify-between items-center px-4">
-            <span id="game-tag" class="text-[9px] font-bold text-cyan-400 uppercase">Battletoads</span>
-            <button onclick="location.reload()" class="text-zinc-500 text-[8px] font-bold uppercase">Quit</button>
+            <span id="game-tag" class="text-[9px] font-bold text-cyan-400 uppercase tracking-widest font-bold">Battletoads</span>
+            <button onclick="location.reload()" class="text-zinc-500 text-[8px] font-bold uppercase border border-zinc-800 px-2 py-1 rounded">Exit</button>
         </div>
         <div id="emulator-wrapper">
             <div id="game-container"></div>
@@ -51,13 +52,13 @@
                 <div class="grid grid-cols-3 gap-2">
                     <div></div><button class="ctrl-btn" id="btn-up">▲</button><div></div>
                     <button class="ctrl-btn" id="btn-left">◀</button>
-                    <div class="w-12 h-12 bg-zinc-900 rounded-full border-2 border-zinc-800"></div>
+                    <div class="w-10 h-10 bg-zinc-900 rounded-full border border-zinc-800"></div>
                     <button class="ctrl-btn" id="btn-right">▶</button>
                     <div></div><button class="ctrl-btn" id="btn-down">▼</button><div></div>
                 </div>
-                <div class="flex flex-col gap-6">
-                    <button class="ctrl-btn bg-red-600 border-red-400" id="btn-a">A</button>
-                    <button class="bg-zinc-800 py-2 px-4 rounded text-[10px] font-bold text-white uppercase" id="btn-start">Start</button>
+                <div class="flex flex-col gap-4 items-center">
+                    <button class="ctrl-btn bg-red-600 border-red-400 text-white font-bold" id="btn-a">A</button>
+                    <button class="bg-zinc-800 py-2 px-6 rounded text-[10px] font-bold text-white tracking-widest" id="btn-start">START</button>
                 </div>
             </div>
         </div>
@@ -68,17 +69,20 @@
         let currentRoom = null;
         let pNum = 1;
 
-        const mapP1 = { UP: "ArrowUp", DOWN: "ArrowDown", LEFT: "ArrowLeft", RIGHT: "ArrowRight", A: "KeyX", START: "Enter" };
-        const mapP2 = { UP: "KeyW", DOWN: "KeyS", LEFT: "KeyA", RIGHT: "KeyD", A: "KeyJ", START: "Space" };
+        // Коды клавиш Sega для эмулятора
+        const keyCodes = {
+            UP: "ArrowUp", DOWN: "ArrowDown", LEFT: "ArrowLeft", RIGHT: "ArrowRight", 
+            A: "KeyX", START: "Enter"
+        };
 
         window.app = {
             run: function(rom, p) {
                 pNum = p;
                 currentRoom = Math.random().toString(36).substring(2, 6).toUpperCase();
                 socket.emit('createRoom', currentRoom);
-                this.load(rom, `HOST ID: ${currentRoom}`);
+                this.load(rom, `ROOM ID: ${currentRoom}`);
             },
-            showJoin: function(rom) {
+            showJoin: function() {
                 document.getElementById('join-modal').classList.remove('hidden');
                 document.getElementById('btn-submit-join').onclick = () => {
                     const code = document.getElementById('lobby-input').value.toUpperCase();
@@ -86,7 +90,7 @@
                     currentRoom = code; pNum = 2;
                     socket.emit('joinRoom', currentRoom);
                     document.getElementById('join-modal').classList.add('hidden');
-                    this.load(rom, `CONNECTED P2`);
+                    this.load('battletoads.md', `CONNECTED P2`);
                 };
             },
             load: function(romFile, tag) {
@@ -96,8 +100,10 @@
 
                 window.EJS_player = '#game-container';
                 window.EJS_core = 'sega';
-                // Берем ROM прямо с твоего сервера (обязательно .bin)
-                window.EJS_gameUrl = window.location.origin + '/' + romFile;
+                
+                // КЛЮЧЕВОЙ ФИКС: Прямая ссылка на GitHub Raw для обхода проблем MIME-типов
+                window.EJS_gameUrl = 'https://raw.githubusercontent.com/klimsporyshevklim-collab/Retrosega/main/public/' + romFile;
+                
                 window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
                 window.EJS_startOnLoaded = true;
 
@@ -112,25 +118,26 @@
             const event = new KeyboardEvent(isDown ? 'keydown' : 'keyup', { 
                 code: code, 
                 key: code,
-                keyCode: (code === 'Enter' ? 13 : 0),
-                bubbles: true 
+                bubbles: true,
+                cancelable: true
             });
             document.dispatchEvent(event);
-            if (canvas) { canvas.focus(); canvas.dispatchEvent(event); }
+            if (canvas) {
+                canvas.focus();
+                canvas.dispatchEvent(event);
+            }
         }
 
         socket.on('inputSync', (data) => {
             if(data.player !== pNum) {
-                const maps = [mapP1, mapP2];
-                fireKey(maps[data.player-1][data.btn], data.state);
+                fireKey(keyCodes[data.btn], data.state);
             }
         });
 
         function bind(id, k) {
             const el = document.getElementById(id);
             const handle = (d) => {
-                const myMap = (pNum === 1) ? mapP1 : mapP2;
-                fireKey(myMap[k], d);
+                fireKey(keyCodes[k], d);
                 if(currentRoom) socket.emit('inputSync', { roomId: currentRoom, player: pNum, btn: k, state: d });
             };
             el.onpointerdown = (e) => { 
