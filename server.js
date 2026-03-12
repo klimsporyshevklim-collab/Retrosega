@@ -5,45 +5,33 @@ const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
-const io = socketIo(server, {
-    cors: { origin: "*", methods: ["GET", "POST"] }
-});
+const io = socketIo(server, { cors: { origin: "*" } });
 
 app.use(express.static('public'));
 
 const rooms = {};
 
 io.on('connection', (socket) => {
-    console.log('User connected:', socket.id);
-
     socket.on('createRoom', (roomId) => {
         socket.join(roomId);
         rooms[roomId] = { host: socket.id, guest: null };
-        console.log('Room created:', roomId);
     });
 
     socket.on('joinRoom', (roomId) => {
-        if (rooms[roomId] && !rooms[roomId].guest) {
+        if (rooms[roomId]) {
             socket.join(roomId);
             rooms[roomId].guest = socket.id;
-            // ВАЖНО: Даем команду обоим игрокам запустить эмулятор одновременно
-            io.to(roomId).emit('syncStart');
-            console.log('Guest joined, starting sync...');
-        } else {
-            socket.emit('error', 'Room full or not found');
+            io.to(roomId).emit('syncStart'); // Запуск у обоих
         }
     });
 
     socket.on('inputSync', (data) => {
-        // Прокидываем нажатие кнопки второму игроку в комнате
+        // Передаем нажатие всем в комнате (включая себя для проверки или только другому)
         socket.to(data.roomId).emit('inputSync', data);
     });
 
-    socket.on('disconnect', () => {
-        // Очистка комнат при дисконнекте (упрощенно)
-        console.log('User disconnected');
-    });
+    socket.on('disconnect', () => { /* Логика выхода */ });
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Server on port ${PORT}`));
+server.listen(PORT, () => console.log(`Server running on ${PORT}`));
