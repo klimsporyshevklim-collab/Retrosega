@@ -3,91 +3,156 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Pixel Arena Final</title>
+    <title>Pixel Arena v9.0</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="/socket.io/socket.io.js"></script>
     <style>
         body { background: #000; color: #fff; font-family: monospace; margin: 0; overflow: hidden; }
-        #emulator-wrapper { width: 100vw; height: 50vh; background: #111; position: relative; border-bottom: 2px solid #333; }
+        #game-overlay { position: fixed; inset: 0; background: #000; z-index: 1000; display: none; flex-direction: column; }
+        #emulator-wrapper { width: 100vw; height: 50vh !important; background: #111; position: relative; border-bottom: 2px solid #333; }
         #game-container { width: 100% !important; height: 100% !important; }
         .ctrl-btn { width: 65px; height: 65px; background: #222; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; border: 2px solid #444; touch-action: none; }
         .ctrl-btn:active { background: #444; transform: scale(0.9); }
-        #debug { position: fixed; top: 0; left: 0; background: rgba(0,0,0,0.8); font-size: 10px; padding: 5px; z-index: 10000; width: 100%; pointer-events: none; }
+        #debug { position: fixed; top: 0; left: 0; background: rgba(0,0,0,0.8); font-size: 10px; padding: 5px; z-index: 10000; width: 100%; pointer-events: none; color: #0f0; }
     </style>
 </head>
 <body class="flex flex-col h-screen">
 
-    <div id="debug">Инициализация...</div>
+    <div id="debug">Система готова...</div>
 
-    <div id="setup-screen" class="flex-1 flex flex-col items-center justify-center p-6 space-y-6">
-        <h1 class="text-cyan-400 text-2xl font-bold italic">BATTLETOADS ARENA</h1>
-        <button onclick="startApp()" class="bg-cyan-500 text-black font-black px-10 py-5 rounded-xl shadow-lg shadow-cyan-500/20 text-xl">
-            ЗАПУСТИТЬ ИГРУ
-        </button>
-        <p class="text-zinc-500 text-[10px]">Нажми кнопку, если видишь черный экран</p>
+    <main id="menu" class="flex-1 p-6 space-y-6 overflow-y-auto">
+        <h1 class="text-cyan-400 text-2xl font-bold italic tracking-tighter uppercase">Pixel Arena</h1>
+        
+        <div class="bg-zinc-900 p-4 rounded-xl border border-zinc-800 space-y-4">
+            <h4 class="text-white font-bold uppercase text-sm">Battletoads</h4>
+            <div class="flex gap-2">
+                <button onclick="app.run('battletoads.md', 1)" class="bg-cyan-500 text-black font-black px-4 py-3 rounded-lg flex-1 text-xs">HOST LOBBY</button>
+                <button onclick="app.showJoin('battletoads.md')" class="bg-red-600 font-bold px-4 py-3 rounded-lg flex-1 text-xs">JOIN P2</button>
+            </div>
+        </div>
+
+        <div class="bg-zinc-900 p-4 rounded-xl border border-zinc-800 space-y-4">
+            <h4 class="text-white font-bold uppercase text-sm">Sonic</h4>
+            <button onclick="app.run('sonic.bin', 1)" class="bg-cyan-500 text-black font-black px-4 py-3 rounded-lg w-full text-xs text-center">SOLO PLAY</button>
+        </div>
+    </main>
+
+    <div id="join-modal" class="hidden fixed inset-0 bg-black/95 z-[5000] flex items-center justify-center p-6">
+        <div class="bg-zinc-900 p-6 rounded-2xl border border-cyan-500/50 w-full max-w-xs text-center">
+            <h3 class="text-white font-bold mb-4 uppercase text-xs">Enter Host ID</h3>
+            <input id="lobby-input" type="text" class="w-full bg-black border border-white/20 p-3 rounded text-white text-center font-bold uppercase mb-4 outline-none" maxlength="4">
+            <button id="btn-submit-join" class="w-full bg-cyan-500 text-black font-black py-3 rounded">CONNECT</button>
+        </div>
     </div>
 
-    <div id="game-overlay" class="hidden flex-col h-full">
+    <div id="game-overlay">
+        <div class="h-10 bg-zinc-950 border-b border-cyan-500/20 flex justify-between items-center px-4">
+            <span id="game-tag" class="text-[9px] font-bold text-cyan-400 uppercase">Loading...</span>
+            <button onclick="location.reload()" class="text-zinc-500 text-[8px] font-bold uppercase">Quit</button>
+        </div>
         <div id="emulator-wrapper">
             <div id="game-container"></div>
         </div>
-        
         <div class="flex-1 bg-zinc-950 p-4 flex flex-col justify-around">
             <div class="flex justify-between items-center w-full max-w-sm mx-auto">
                 <div class="grid grid-cols-3 gap-2">
-                    <div></div><button class="ctrl-btn" onpointerdown="fire('ArrowUp', true)" onpointerup="fire('ArrowUp', false)">▲</button><div></div>
-                    <button class="ctrl-btn" onpointerdown="fire('ArrowLeft', true)" onpointerup="fire('ArrowLeft', false)">◀</button>
+                    <div></div><button class="ctrl-btn" id="btn-up">▲</button><div></div>
+                    <button class="ctrl-btn" id="btn-left">◀</button>
                     <div class="w-12 h-12 bg-zinc-900 rounded-full border-2 border-zinc-800"></div>
-                    <button class="ctrl-btn" onpointerdown="fire('ArrowRight', true)" onpointerup="fire('ArrowRight', false)">▶</button>
-                    <div></div><button class="ctrl-btn" onpointerdown="fire('ArrowDown', true)" onpointerup="fire('ArrowDown', false)">▼</button><div></div>
+                    <button class="ctrl-btn" id="btn-right">▶</button>
+                    <div></div><button class="ctrl-btn" id="btn-down">▼</button><div></div>
                 </div>
                 <div class="flex flex-col gap-6">
-                    <button class="ctrl-btn bg-red-600 border-red-400" onpointerdown="fire('KeyX', true)" onpointerup="fire('KeyX', false)">A</button>
-                    <button class="bg-zinc-800 py-2 px-4 rounded text-[10px] font-bold" onpointerdown="fire('Enter', true)" onpointerup="fire('Enter', false)">START</button>
+                    <button class="ctrl-btn bg-red-600 border-red-400" id="btn-a">A</button>
+                    <button class="bg-zinc-800 py-2 px-4 rounded text-[10px] font-bold" id="btn-start">START</button>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
+        const socket = io();
         const debug = document.getElementById('debug');
-        function log(m) { debug.innerText = m; console.log(m); }
+        function log(m) { debug.innerText = "> " + m; console.log(m); }
 
-        function startApp() {
-            document.getElementById('setup-screen').classList.add('hidden');
-            document.getElementById('game-overlay').classList.remove('hidden');
-            loadEmulator();
-        }
+        let currentRoom = null;
+        let pNum = 1;
 
-        function loadEmulator() {
-            log("Загрузка ядра...");
-            window.EJS_player = '#game-container';
-            window.EJS_core = 'sega';
-            // Используем прямой путь. Файл ДОЛЖЕН быть в папке public
-            window.EJS_gameUrl = '/battletoads.md'; 
-            window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
-            window.EJS_startOnLoaded = true;
+        const mapP1 = { UP: "ArrowUp", DOWN: "ArrowDown", LEFT: "ArrowLeft", RIGHT: "ArrowRight", A: "KeyX", START: "Enter" };
+        const mapP2 = { UP: "KeyW", DOWN: "KeyS", LEFT: "KeyA", RIGHT: "KeyD", A: "KeyJ", START: "Space" };
 
-            const s = document.createElement('script');
-            s.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
-            s.onload = () => log("Эмулятор готов. Нажми START");
-            s.onerror = () => log("Ошибка загрузки Loader.js");
-            document.body.appendChild(s);
-        }
+        window.app = {
+            run: function(rom, p) {
+                pNum = p;
+                currentRoom = Math.random().toString(36).substring(2, 6).toUpperCase();
+                socket.emit('createRoom', currentRoom);
+                this.load(rom, `HOST: ${currentRoom}`);
+            },
+            showJoin: function(rom) {
+                document.getElementById('join-modal').classList.remove('hidden');
+                document.getElementById('btn-submit-join').onclick = () => {
+                    const code = document.getElementById('lobby-input').value.toUpperCase();
+                    if(code.length < 1) return;
+                    currentRoom = code;
+                    pNum = 2;
+                    socket.emit('joinRoom', currentRoom);
+                    document.getElementById('join-modal').classList.add('hidden');
+                    this.load(rom, `CONNECTED P2`);
+                };
+            },
+            load: function(romFile, tag) {
+                document.getElementById('menu').style.display = 'none';
+                document.getElementById('game-overlay').style.display = 'flex';
+                document.getElementById('game-tag').innerText = tag;
+                log("Загрузка игры...");
 
-        function fire(code, isDown) {
+                window.EJS_player = '#game-container';
+                window.EJS_core = 'sega';
+                
+                // КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ: Берем ROM напрямую с GitHub, как в Шаге 6
+                window.EJS_gameUrl = 'https://raw.githubusercontent.com/klimsporyshevklim-collab/Retrosega/main/public/' + romFile;
+                
+                window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
+                window.EJS_startOnLoaded = true;
+
+                const s = document.createElement('script');
+                s.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
+                s.onload = () => log("Эмулятор готов.");
+                document.body.appendChild(s);
+            }
+        };
+
+        function fireKey(code, isDown) {
             const canvas = document.querySelector('canvas');
             const event = new KeyboardEvent(isDown ? 'keydown' : 'keyup', { code: code, bubbles: true });
             document.dispatchEvent(event);
-            if (canvas) {
-                canvas.focus();
-                canvas.dispatchEvent(event);
-            }
-            if (isDown && window.Telegram && window.Telegram.WebApp) {
-                window.Telegram.WebApp.HapticFeedback.impactOccurred('medium');
-            }
+            if (canvas) { canvas.focus(); canvas.dispatchEvent(event); }
         }
+
+        socket.on('inputSync', (data) => {
+            if(data.player !== pNum) {
+                const maps = [mapP1, mapP2];
+                fireKey(maps[data.player-1][data.btn], data.state);
+            }
+        });
+
+        function bind(id, k) {
+            const el = document.getElementById(id);
+            const handle = (d) => {
+                const myMap = (pNum === 1) ? mapP1 : mapP2;
+                fireKey(myMap[k], d);
+                if(currentRoom) socket.emit('inputSync', { roomId: currentRoom, player: pNum, btn: k, state: d });
+            };
+            el.onpointerdown = (e) => { 
+                e.preventDefault(); 
+                handle(true); 
+                if (window.Telegram && window.Telegram.WebApp) window.Telegram.WebApp.HapticFeedback.impactOccurred('medium');
+            };
+            el.onpointerup = (e) => { e.preventDefault(); handle(false); };
+        }
+        bind('btn-up', 'UP'); bind('btn-down', 'DOWN'); bind('btn-left', 'LEFT'); bind('btn-right', 'RIGHT');
+        bind('btn-a', 'A'); bind('btn-start', 'START');
     </script>
 </body>
 </html>
