@@ -1,32 +1,25 @@
-<!-- Замени скрипт в index.html на этот -->
-<script>
-    const socket = io(window.location.origin, { transports: ['websocket'] });
-
-    // Проверка, что сокет вообще жив
-    socket.on('connect', () => console.log("Соединение с сервером установлено"));
-
-    function create() {
-        const id = Math.random().toString(36).substring(2, 6).toUpperCase();
-        socket.emit('createRoom', id);
-        alert("Код комнаты: " + id);
-    }
-
-    function join() {
-        const id = document.getElementById('roomId').value.toUpperCase();
-        if(!id) return;
-        
-        // Показываем индикатор
-        const btn = event.target;
-        btn.innerText = "ПРОВЕРКА...";
-
-        socket.emit('checkRoom', id, (response) => {
-            if (response.exists) {
-                alert("Комната найдена! Запуск игры...");
-                // Тут будет запуск
-            } else {
-                alert("Ошибка: Комната не найдена");
-                btn.innerText = "ПОДКЛЮЧИТЬСЯ";
-            }
-        });
-    }
-</script>
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arena</title>
+    <style>
+        body { margin: 0; background: #000; overflow: hidden; }
+        #game-container { width: 100vw; height: 100vh; }
+    </style>
+</head>
+<body>
+    <div id="game-container"></div>
+    <script src="https://cdn.emulatorjs.org/stable/data/loader.js"></script>
+    <script>
+        window.EJS_player = '#game-container';
+        window.EJS_core = 'sega';
+        // Прямая ссылка на твой файл с Гитхаба (RAW)
+        window.EJS_gameUrl = 'https://raw.githubusercontent.com/klimsporyshevklim-collab/Retrosega/main/public/battletoads.bin';
+        window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
+        window.EJS_startOnLoaded = true;
+        window.EJS_VirtualGamepad = true;
+    </script>
+</body>
+</html>
