@@ -1,29 +1,18 @@
 const express = require('express');
-const { createServer } = require('http');
-const { Server } = require('socket.io');
+const { ExpressPeerServer } = require('peer');
+const http = require('http');
 
 const app = express();
-const server = createServer(app);
-const io = new Server(server);
+const server = http.createServer(app);
 
+// Раздаем статику
 app.use(express.static('public'));
 
-// Тут живет состояние игры
-let gameState = { players: {} };
-
-io.on('connection', (socket) => {
-    // Регистрация игрока
-    socket.on('join', (id) => {
-        gameState.players[socket.id] = { x: 0, y: 0 };
-        socket.emit('init', gameState);
-    });
-
-    // Прием инпутов (КНОПКИ)
-    socket.on('input', (data) => {
-        // Сервер сам меняет состояние мира
-        // И рассылает всем обновленную картинку
-        io.emit('update', gameState);
-    });
+// Подключаем PeerServer (сигнальный сервер для P2P)
+const peerServer = ExpressPeerServer(server, {
+    path: '/myapp'
 });
 
-server.listen(3000);
+app.use('/peerjs', peerServer);
+
+server.listen(process.env.PORT || 3000, () => console.log('Arena P2P активна'));
