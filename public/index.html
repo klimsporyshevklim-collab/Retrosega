@@ -3,86 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Pixel Arena - Tournament</title>
+    <title>Pixel Arena - True Netplay</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { margin: 0; background: #000; color: #fff; font-family: monospace; overflow: hidden; }
-        .screen { position: absolute; inset: 0; display: none; flex-direction: column; background: #09090b; z-index: 10; align-items: center; justify-content: center; padding: 20px; text-align: center; }
-        .screen.active { display: flex; }
         
-        /* Экран для одиночной игры */
-        #screen-solo { display: none; position: absolute; inset: 0; flex-direction: column; background: #000; z-index: 20; }
-        #game-container { width: 100vw; height: 50vh; background: #000; }
-        #controls-area { width: 100vw; height: 50vh; background: #09090b; display: flex; flex-direction: column; justify-content: center; }
-        
-        /* Экран для мультиплеера (Iframe на весь экран) */
-        #screen-multiplayer { display: none; position: absolute; inset: 0; background: #000; z-index: 30; }
-        iframe { width: 100vw; height: 100vh; border: none; }
-        
-        /* Кнопки джойстика для соло */
-        .ctrl-btn { width: 65px; height: 65px; background: #1a1a1b; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; border: 2px solid #333; touch-action: none; color: #00f0ff; user-select: none; }
-        .ctrl-btn:active { background: #00f0ff; color: #000; transform: scale(0.9); }
+        #screen-menu { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: #09090b; padding: 20px; z-index: 10; position: absolute; inset: 0; }
+        #screen-game { display: none; position: absolute; inset: 0; background: #000; z-index: 20; }
+        #game-container { width: 100vw; height: 100vh; background: #000; }
     </style>
 </head>
 <body>
 
     <!-- ГЛАВНОЕ МЕНЮ -->
-    <div id="screen-menu" class="screen active">
+    <div id="screen-menu">
         <h1 class="text-cyan-400 text-4xl font-black italic uppercase mb-8">PIXEL ARENA</h1>
         <div class="bg-zinc-900 p-8 rounded-3xl border border-zinc-800 w-full max-w-sm">
-            <div class="text-6xl mb-6">🐸</div>
-            <!-- Тренировка (Остается в ТГ) -->
+            <div class="text-6xl mb-6 text-center">🐸</div>
             <button onclick="launchSolo()" class="bg-zinc-800 text-white font-bold py-4 rounded-xl w-full uppercase mb-4 border border-zinc-700">Одиночная игра (ТГ)</button>
-            <!-- Турнир (Выбрасывает в браузер) -->
             <button onclick="launchMultiplayer()" class="bg-cyan-500 text-black font-black py-4 rounded-xl w-full uppercase shadow-[0_0_15px_rgba(0,240,255,0.4)]">Сетевой Турнир (PVP)</button>
         </div>
     </div>
 
-    <!-- ЭКРАН ОДИНОЧНОЙ ИГРЫ (Наш эмулятор) -->
-    <div id="screen-solo">
+    <!-- ЭКРАН ИГРЫ (Наш эмулятор) -->
+    <div id="screen-game">
         <div id="game-container"></div>
-        <div id="controls-area">
-            <div class="flex justify-between items-center w-full max-w-md mx-auto px-4">
-                <div class="grid grid-cols-3 gap-2">
-                    <div></div><button class="ctrl-btn" id="btn-up">▲</button><div></div>
-                    <button class="ctrl-btn" id="btn-left">◀</button>
-                    <div class="w-10 h-10 bg-zinc-900 rounded-full border-2 border-zinc-800 place-self-center"></div>
-                    <button class="ctrl-btn" id="btn-right">▶</button><div></div>
-                    <button class="ctrl-btn" id="btn-down">▼</button><div></div>
-                </div>
-                <div class="flex flex-col gap-6 items-center">
-                    <button class="ctrl-btn bg-red-600 border-red-500 text-white font-bold" id="btn-a">A</button>
-                    <button class="bg-zinc-800 py-3 px-8 rounded-xl text-xs font-bold text-white border border-zinc-700 uppercase" id="btn-start">Start</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ЭКРАН МУЛЬТИПЛЕЕРА (Iframe сервиса) -->
-    <div id="screen-multiplayer">
-        <iframe id="mp-frame" src="" allow="gamepad *; microphone *"></iframe>
     </div>
 
     <script>
-        // --- 1. ОДИНОЧНАЯ ИГРА ---
         function launchSolo() {
-            document.getElementById('screen-menu').classList.remove('active');
-            document.getElementById('screen-solo').style.display = 'flex';
-
-            window.EJS_player = '#game-container';
-            window.EJS_core = 'sega';
-            window.EJS_gameUrl = '/battletoads.bin'; 
-            window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
-            window.EJS_startOnLoaded = true;
-            window.EJS_VirtualGamepad = false; // Отключаем их кнопки, используем наши HTML
-
-            const s = document.createElement('script');
-            s.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
-            document.body.appendChild(s);
+            loadGame();
         }
 
-        // --- 2. ПОБЕГ ИЗ TELEGRAM ДЛЯ PVP ---
         function launchMultiplayer() {
             const url = window.location.origin + '?mode=netplay';
             if (window.Telegram && window.Telegram.WebApp) {
@@ -92,39 +45,32 @@
             }
         }
 
-        // --- 3. АВТОЗАПУСК IFRAME ВО ВНЕШНЕМ БРАУЗЕРЕ ---
+        function loadGame() {
+            document.getElementById('screen-menu').style.display = 'none';
+            document.getElementById('screen-game').style.display = 'block';
+
+            window.EJS_player = '#game-container';
+            window.EJS_core = 'sega';
+            window.EJS_gameUrl = '/battletoads.bin'; 
+            window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
+            window.EJS_startOnLoaded = true;
+            window.EJS_VirtualGamepad = true; // Родные кнопки, чтобы можно было открыть меню
+
+            // === ТА САМАЯ НАСТРОЙКА, КОТОРАЯ ВКЛЮЧАЕТ МЕНЮ NETPLAY ===
+            window.EJS_netplayServer = "wss://netplay.emulatorjs.org"; 
+
+            const s = document.createElement('script');
+            s.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
+            document.body.appendChild(s);
+        }
+
+        // Автозапуск во внешнем браузере
         window.onload = () => {
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.get('mode') === 'netplay') {
-                document.getElementById('screen-menu').classList.remove('active');
-                document.getElementById('screen-multiplayer').style.display = 'block';
-                
-                // Тот самый рабочий линк, который ты нашел!
-                document.getElementById('mp-frame').src = "https://www.retrogames.cc/embed/17395-battletoads-usa.html";
+                loadGame();
             }
         };
-
-        // --- УПРАВЛЕНИЕ ДЛЯ ОДИНОЧНОЙ ИГРЫ ---
-        function send(code, isDown) {
-            const canvas = document.querySelector('canvas');
-            if (canvas) {
-                canvas.focus();
-                const ev = new KeyboardEvent(isDown ? 'keydown' : 'keyup', { code: code, bubbles: true });
-                document.dispatchEvent(ev);
-                canvas.dispatchEvent(ev);
-            }
-        }
-
-        function bind(id, k) {
-            const el = document.getElementById(id);
-            el.onpointerdown = (e) => { e.preventDefault(); send(k, true); };
-            el.onpointerup = (e) => { e.preventDefault(); send(k, false); };
-            el.onpointerleave = (e) => { e.preventDefault(); send(k, false); };
-        }
-
-        bind('btn-up', 'ArrowUp'); bind('btn-down', 'ArrowDown'); 
-        bind('btn-left', 'ArrowLeft'); bind('btn-right', 'ArrowRight');
-        bind('btn-a', 'KeyX'); bind('btn-start', 'Enter');
     </script>
 </body>
 </html>
