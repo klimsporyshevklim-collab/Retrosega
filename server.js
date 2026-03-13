@@ -1,13 +1,12 @@
 const express = require('express');
+const { ExpressPeerServer } = require('peer');
+const http = require('http');
 const app = express();
-const path = require('path');
+const server = http.createServer(app);
 
 app.use(express.static('public'));
 
-// Если кто-то заходит на /arena, отдаем арену
-app.get('/arena', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public/arena.html'));
-});
+const peerServer = ExpressPeerServer(server, { path: '/myapp' });
+app.use('/peerjs', peerServer);
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log('Арена готова!'));
+server.listen(process.env.PORT || 3000, () => console.log('Арена запущена'));
