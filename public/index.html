@@ -2,31 +2,54 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PIXEL ARENA</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <title>Pixel Arena - Battletoads PvP</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <script src="https://cdn.emulatorjs.org/stable/data/loader.js"></script>
     <style>
-        body { margin: 0; background: #000; display: flex; align-items: center; justify-content: center; height: 100vh; color: white; font-family: sans-serif; }
-        button { padding: 20px 40px; background: #00f0ff; color: #000; border-radius: 15px; font-weight: bold; border: none; cursor: pointer; }
+        body { margin: 0; background: #000; color: #fff; overflow: hidden; }
+        #game-container { width: 100vw; height: 100vh; }
+        .ui { position: absolute; top: 10px; left: 10px; z-index: 100; background: rgba(0,0,0,0.8); padding: 15px; border-radius: 10px; border: 1px solid #00f0ff; }
     </style>
 </head>
 <body>
-    <button id="btn">ИГРАТЬ В BATTLETOADS</button>
+    <div id="game-container"></div>
+    
+    <div class="ui" id="lobby">
+        <h2 class="text-cyan-400 font-bold mb-2">РЕЖИМ ТУРНИРА</h2>
+        <div id="status" class="mb-2 text-xs">Статус: Ожидание...</div>
+        <button onclick="host()" class="bg-cyan-500 text-black px-4 py-2 rounded-lg font-bold">СОЗДАТЬ ЛОББИ</button>
+        <input id="peer-id" placeholder="ID друга" class="bg-zinc-800 p-2 text-white mt-2 w-full">
+        <button onclick="join()" class="bg-zinc-700 p-2 mt-2 w-full">ПОДКЛЮЧИТЬСЯ</button>
+    </div>
 
     <script>
-        const btn = document.getElementById('btn');
-        // Ссылка на ТВОЙ сайт (не в Телеграме)
-        const gameUrl = "https://www.retrogames.cc/embed/28169-battletoads-world.html";
+        const peer = new Peer(null, { host: '/', path: '/peerjs', port: location.port || 443 });
+        let conn;
 
-        btn.onclick = () => {
-            // Если мы в Телеграме — выбрасываем игрока в браузер
-            if (window.Telegram && window.Telegram.WebApp) {
-                window.Telegram.WebApp.openLink(gameUrl);
-            } else {
-                // Если мы уже в браузере — просто переходим
-                window.location.href = gameUrl;
-            }
-        };
+        // Настройка эмулятора
+        window.EJS_player = '#game-container';
+        window.EJS_core = 'sega';
+        window.EJS_gameUrl = '/battletoads.bin';
+        window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
+        window.EJS_startOnLoaded = true;
+
+        function startEmulation() {
+            document.getElementById('lobby').style.display = 'none';
+            const s = document.createElement('script');
+            s.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
+            document.body.appendChild(s);
+        }
+
+        function host() {
+            peer.on('open', id => alert("Твой ID: " + id));
+            peer.on('connection', c => { conn = c; startEmulation(); });
+        }
+
+        function join() {
+            const id = document.getElementById('peer-id').value;
+            conn = peer.connect(id);
+            conn.on('open', () => startEmulation());
+        }
     </script>
 </body>
 </html>
