@@ -3,14 +3,19 @@ const http = require('http');
 const { Server } = require("socket.io");
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+
+// Разрешаем все соединения для Socket.io
+const io = new Server(server, {
+  cors: { origin: "*" }
+});
 
 app.use(express.static('public'));
 
-// Хранилище: { "ABCD": { host: "socketId" } }
 const rooms = {};
 
 io.on('connection', (socket) => {
+    console.log('Кто-то подключился:', socket.id);
+
     socket.on('createRoom', (roomId) => {
         rooms[roomId] = { host: socket.id };
         socket.join(roomId);
@@ -26,4 +31,4 @@ io.on('connection', (socket) => {
     });
 });
 
-server.listen(process.env.PORT || 3000);
+server.listen(process.env.PORT || 3000, () => console.log('Сервер запущен'));
