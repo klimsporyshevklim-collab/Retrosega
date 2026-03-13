@@ -1,45 +1,32 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <script src="/socket.io/socket.io.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-black text-white flex flex-col items-center justify-center h-screen">
-    <h1 class="text-3xl font-black text-cyan-400 mb-8 italic">PIXEL ARENA</h1>
-    
-    <div id="menu" class="flex flex-col w-64 gap-4">
-        <button onclick="create()" class="bg-cyan-500 text-black py-4 rounded-xl font-bold">СОЗДАТЬ ЛОББИ</button>
-        <input id="roomId" type="text" placeholder="ID ДРУГА" class="bg-zinc-800 p-4 rounded-xl text-center uppercase">
-        <button onclick="join()" class="bg-zinc-700 py-4 rounded-xl font-bold">ПОДКЛЮЧИТЬСЯ</button>
-    </div>
+<!-- Замени скрипт в index.html на этот -->
+<script>
+    const socket = io(window.location.origin, { transports: ['websocket'] });
 
-    <script>
-        const socket = io();
+    // Проверка, что сокет вообще жив
+    socket.on('connect', () => console.log("Соединение с сервером установлено"));
+
+    function create() {
+        const id = Math.random().toString(36).substring(2, 6).toUpperCase();
+        socket.emit('createRoom', id);
+        alert("Код комнаты: " + id);
+    }
+
+    function join() {
+        const id = document.getElementById('roomId').value.toUpperCase();
+        if(!id) return;
         
-        function create() {
-            const id = Math.random().toString(36).substring(2, 6).toUpperCase();
-            socket.emit('createRoom', id);
-            alert("Твой ID: " + id + ". Отправь его другу!");
-        }
+        // Показываем индикатор
+        const btn = event.target;
+        btn.innerText = "ПРОВЕРКА...";
 
-        function join() {
-            const id = document.getElementById('roomId').value.toUpperCase();
-            socket.emit('checkRoom', id, (response) => {
-                if (response.exists) {
-                    alert("Подключение...");
-                    // Тут мы переходим к запуску эмулятора
-                    startArena(id);
-                } else {
-                    alert("Комната не найдена!");
-                }
-            });
-        }
-
-        function startArena(id) {
-            document.getElementById('menu').innerHTML = '<h2 class="text-cyan-400">Соединение с ареной...</h2>';
-            // Здесь будет твой код запуска эмулятора
-        }
-    </script>
-</body>
-</html>
+        socket.emit('checkRoom', id, (response) => {
+            if (response.exists) {
+                alert("Комната найдена! Запуск игры...");
+                // Тут будет запуск
+            } else {
+                alert("Ошибка: Комната не найдена");
+                btn.innerText = "ПОДКЛЮЧИТЬСЯ";
+            }
+        });
+    }
+</script>
