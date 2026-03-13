@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Pixel Arena - Online</title>
+    <script src="https://cdn.emulatorjs.org/stable/data/loader.js"></script>
+</head>
+<body>
+    <div id="game-container" style="width:100vw; height:100vh;"></div>
+    <script>
+        window.EJS_player = '#game-container';
+        window.EJS_core = 'sega';
+        window.EJS_gameUrl = '/battletoads.bin';
+        window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
+        
+        // ВКЛЮЧАЕМ NETPLAY (СЕТЕВУЮ ИГРУ)
+        window.EJS_netplayServer = "wss://netplay.emulatorjs.org"; 
+        
+        window.EJS_startOnLoaded = true;
+    </script>
+</body>
+</html>
