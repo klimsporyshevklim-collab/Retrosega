@@ -1,25 +1,32 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Arena</title>
+    <title>PIXEL ARENA</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { margin: 0; background: #000; overflow: hidden; }
-        #game-container { width: 100vw; height: 100vh; }
+        body { margin: 0; background: #000; display: flex; align-items: center; justify-content: center; height: 100vh; color: white; font-family: sans-serif; }
+        button { padding: 20px 40px; background: #00f0ff; color: #000; border-radius: 15px; font-weight: bold; border: none; cursor: pointer; }
     </style>
 </head>
 <body>
-    <div id="game-container"></div>
-    <script src="https://cdn.emulatorjs.org/stable/data/loader.js"></script>
+    <button id="btn">ИГРАТЬ В BATTLETOADS</button>
+
     <script>
-        window.EJS_player = '#game-container';
-        window.EJS_core = 'sega';
-        // Прямая ссылка на твой файл с Гитхаба (RAW)
-        window.EJS_gameUrl = 'https://raw.githubusercontent.com/klimsporyshevklim-collab/Retrosega/main/public/battletoads.bin';
-        window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
-        window.EJS_startOnLoaded = true;
-        window.EJS_VirtualGamepad = true;
+        const btn = document.getElementById('btn');
+        // Ссылка на ТВОЙ сайт (не в Телеграме)
+        const gameUrl = "https://www.retrogames.cc/embed/28169-battletoads-world.html";
+
+        btn.onclick = () => {
+            // Если мы в Телеграме — выбрасываем игрока в браузер
+            if (window.Telegram && window.Telegram.WebApp) {
+                window.Telegram.WebApp.openLink(gameUrl);
+            } else {
+                // Если мы уже в браузере — просто переходим
+                window.location.href = gameUrl;
+            }
+        };
     </script>
 </body>
 </html>
