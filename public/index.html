@@ -1,42 +1,104 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Battletoads PvP</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Pixel Arena - Battletoads</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { margin: 0; background: #000; color: #fff; font-family: monospace; overflow: hidden; }
+        #menu { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: #09090b; padding: 20px; z-index: 10; position: relative; }
+        #game-overlay { display: none; width: 100vw; height: 100vh; background: #000; }
+        #game-container { width: 100%; height: 100%; }
+        /* Декоративное свечение */
+        .glow { box-shadow: 0 0 20px rgba(0, 240, 255, 0.4); }
+    </style>
 </head>
-<body class="bg-black text-white flex flex-col items-center justify-center h-screen p-4">
-    <h1 class="text-2xl font-bold mb-8 uppercase text-cyan-400">Battletoads Arena</h1>
-    
-    <!-- КНОПКА ДЛЯ ТЕЛЕГРАМА -->
-    <button id="open-browser" class="bg-cyan-500 text-black font-black w-full py-6 rounded-2xl uppercase">
-        Открыть в браузере для игры
-    </button>
+<body>
 
-    <div id="game-area" class="hidden w-full h-full">
-        <!-- Ссылка на эмулятор с Netplay -->
-        <iframe id="game-frame" src="" width="100%" height="100%" allow="gamepad *; microphone *"></iframe>
+    <!-- ГЛАВНОЕ МЕНЮ -->
+    <div id="menu">
+        <h1 class="text-cyan-400 text-4xl font-black italic uppercase tracking-tighter mb-8">PIXEL ARENA</h1>
+        
+        <div class="bg-zinc-900 p-8 rounded-3xl border border-zinc-800 text-center glow w-full max-w-sm">
+            <div class="text-6xl mb-6">🐸</div>
+            <h2 class="text-white text-2xl font-bold mb-6 uppercase">Battletoads</h2>
+            
+            <div class="space-y-4">
+                <!-- КНОПКА 1: Тренировка в Telegram -->
+                <button onclick="launchSolo()" class="bg-zinc-800 text-white px-8 py-4 rounded-xl font-bold uppercase w-full text-xs border border-zinc-700 active:scale-95 transition-transform">
+                    <span class="block text-[14px] text-cyan-400 mb-1">ОДИНОЧНАЯ ИГРА</span>
+                    <span class="text-[8px] text-zinc-400">Внутри Telegram</span>
+                </button>
+                
+                <!-- КНОПКА 2: Мультиплеер во внешнем браузере -->
+                <button onclick="launchMultiplayer()" class="bg-cyan-500 text-black px-8 py-4 rounded-xl font-black uppercase w-full active:scale-95 transition-transform">
+                    <span class="block text-[14px] mb-1">СЕТЕВОЙ ТУРНИР (PVP)</span>
+                    <span class="text-[8px] opacity-70">Откроется в Safari/Chrome</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- КОНТЕЙНЕР ЭМУЛЯТОРА -->
+    <div id="game-overlay">
+        <div id="game-container"></div>
     </div>
 
     <script>
-        const btn = document.getElementById('open-browser');
-        const url = window.location.origin + '/game.html';
+        // Функция 1: Запуск соло режима прямо в Telegram
+        function launchSolo() {
+            document.getElementById('menu').style.display = 'none';
+            document.getElementById('game-overlay').style.display = 'block';
+            bootEmulator();
+        }
 
-        btn.onclick = () => {
+        // Функция 2: Побег из Telegram для Мультиплеера
+        function launchMultiplayer() {
+            // Создаем ссылку на этот же сайт, но с параметром ?mode=netplay
+            const url = window.location.origin + '?mode=netplay';
+            
+            // Заставляем Телеграм открыть ссылку во внешнем браузере
             if (window.Telegram && window.Telegram.WebApp) {
                 window.Telegram.WebApp.openLink(url);
             } else {
                 window.location.href = url;
             }
-        };
-
-        // Если мы уже в браузере - запускаем игру
-        if (window.location.pathname === '/game.html') {
-            document.getElementById('menu').classList.add('hidden');
-            document.getElementById('game-area').classList.remove('hidden');
-            // Здесь мы используем эмулятор с поддержкой Netplay
-            document.getElementById('game-frame').src = "https://www.retrogames.cc/embed/17395-battletoads-usa.html";
         }
+
+        // Функция 3: Загрузка самого эмулятора (Магия CDN)
+        function bootEmulator() {
+            window.EJS_player = '#game-container';
+            window.EJS_core = 'sega';
+            
+            // Берем игру с твоего сервера
+            window.EJS_gameUrl = '/battletoads.bin'; 
+            
+            // БЕРЕМ ДВИЖОК ИЗ ОБЛАКА (Никаких черных экранов)
+            window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
+            
+            window.EJS_startOnLoaded = true;
+            
+            // ВКЛЮЧАЕМ РОДНЫЕ ЭКРАННЫЕ КНОПКИ (Чтобы не рисовать их самим)
+            window.EJS_VirtualGamepad = true; 
+
+            // Загружаем скрипт эмулятора
+            const script = document.createElement('script');
+            script.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
+            document.body.appendChild(script);
+        }
+
+        // АВТОЗАПУСК: Если открыли во внешнем браузере по ссылке PVP
+        window.onload = () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('mode') === 'netplay') {
+                // Прячем меню и сразу грузим игру
+                document.getElementById('menu').style.display = 'none';
+                document.getElementById('game-overlay').style.display = 'block';
+                bootEmulator();
+            }
+        };
     </script>
 </body>
 </html>
