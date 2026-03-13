@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Pixel Arena - True Netplay</title>
+    <title>Pixel Arena - Perfect Sync</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="/socket.io/socket.io.js"></script>
@@ -13,10 +13,11 @@
         .screen.active { display: flex; }
         
         #screen-game { display: none; position: absolute; inset: 0; flex-direction: column; background: #000; z-index: 20; }
-        #game-container { width: 100vw; height: 100vh; background: #000; }
+        #game-container { width: 100vw; height: 50vh; background: #000; }
+        #controls-area { width: 100vw; height: 50vh; background: #09090b; display: flex; flex-direction: column; justify-content: center; }
         
-        /* Инструкция поверх игры для мультиплеера */
-        #netplay-instruction { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); border: 2px solid #00f0ff; padding: 15px; border-radius: 10px; z-index: 1000; width: 90%; max-width: 400px; text-align: center; }
+        .ctrl-btn { width: 65px; height: 65px; background: #1a1a1b; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; border: 2px solid #333; touch-action: none; color: #00f0ff; user-select: none; }
+        .ctrl-btn:active { background: #00f0ff; color: #000; transform: scale(0.9); }
     </style>
 </head>
 <body>
@@ -24,10 +25,10 @@
     <!-- 1. МЕНЮ ТЕЛЕГРАМА -->
     <div id="screen-tg" class="screen active">
         <h1 class="text-cyan-400 text-4xl font-black italic uppercase mb-8">PIXEL ARENA</h1>
-        <div class="bg-zinc-900 p-8 rounded-3xl border border-zinc-800 w-full max-w-sm shadow-[0_0_20px_rgba(0,240,255,0.2)]">
+        <div class="bg-zinc-900 p-8 rounded-3xl border border-zinc-800 w-full max-w-sm">
             <div class="text-6xl mb-6">🐸</div>
             <button onclick="app.launchSolo()" class="bg-zinc-800 text-white font-bold py-4 rounded-xl w-full uppercase mb-4 border border-zinc-700">Одиночная игра (ТГ)</button>
-            <button onclick="app.goExternal()" class="bg-cyan-500 text-black font-black py-4 rounded-xl w-full uppercase shadow-lg">Сетевой Турнир (PVP)</button>
+            <button onclick="app.goExternal()" class="bg-cyan-500 text-black font-black py-4 rounded-xl w-full uppercase">Сетевой Турнир (PVP)</button>
         </div>
     </div>
 
@@ -35,41 +36,60 @@
     <div id="screen-lobby" class="screen">
         <h1 class="text-cyan-400 text-2xl font-black uppercase mb-8 border-b-2 border-cyan-500 pb-2">ТУРНИРНОЕ ЛОББИ</h1>
         <div class="flex gap-4 w-full max-w-sm">
-            <button onclick="app.createLobby()" class="bg-cyan-500 text-black font-black py-5 rounded-xl flex-1 uppercase text-xs shadow-lg">Создать</button>
+            <button onclick="app.createLobby()" class="bg-cyan-500 text-black font-black py-5 rounded-xl flex-1 uppercase text-xs">Создать</button>
             <button onclick="app.showJoin()" class="bg-zinc-800 text-white font-bold py-5 rounded-xl flex-1 uppercase text-xs border border-zinc-700">Войти по ID</button>
         </div>
     </div>
 
-    <!-- 3. ОЖИДАНИЕ ХОСТА -->
-    <div id="screen-wait" class="screen">
-        <div class="text-cyan-400 text-lg animate-pulse mb-6 font-bold uppercase">Ждем соперника...</div>
-        <p class="text-zinc-500 text-xs mb-2 uppercase">Продиктуй этот код:</p>
+    <!-- 3. ЭКРАН ОЖИДАНИЯ И ЗАГРУЗКИ -->
+    <div id="screen-sync" class="screen">
+        <div id="sync-status" class="text-cyan-400 text-lg animate-pulse mb-6 font-bold uppercase">Ждем соперника...</div>
         <div id="room-code" class="text-5xl font-black text-white bg-zinc-900 py-6 px-10 rounded-2xl tracking-[0.2em] border border-zinc-800">----</div>
+        <p id="sync-desc" class="text-zinc-500 text-xs mt-4 uppercase">Продиктуй код другу</p>
     </div>
 
     <!-- 4. ВВОД КОДА -->
     <div id="screen-join" class="screen">
         <h3 class="text-white font-bold mb-4 uppercase">Вход в Турнир</h3>
         <input id="join-input" type="text" class="w-full max-w-xs bg-black border border-zinc-700 p-4 rounded-xl text-center font-black text-3xl uppercase text-cyan-400 mb-6 outline-none" maxlength="4" placeholder="КОД">
-        <button onclick="app.joinLobby()" class="w-full max-w-xs bg-cyan-500 text-black font-black py-4 rounded-xl uppercase shadow-lg">Подключиться</button>
+        <button onclick="app.joinLobby()" class="w-full max-w-xs bg-cyan-500 text-black font-black py-4 rounded-xl uppercase">Подключиться</button>
     </div>
 
-    <!-- 5. ИГРОВОЙ ЭКРАН -->
+    <!-- 5. ИГРА И ДЖОЙСТИК -->
     <div id="screen-game">
-        <!-- Инструкция для Мультиплеера (появится только в PVP) -->
-        <div id="netplay-instruction" style="display: none;">
-            <p class="text-cyan-400 font-bold mb-2 uppercase text-sm">Связь установлена!</p>
-            <p id="instruction-text" class="text-white text-xs mb-4"></p>
-            <button onclick="this.parentElement.style.display='none'" class="bg-zinc-800 text-white px-4 py-2 rounded font-bold text-xs uppercase border border-zinc-700">Я ПОНЯЛ (Скрыть)</button>
-        </div>
-        
         <div id="game-container"></div>
+        <div id="controls-area">
+            <div class="flex justify-between items-center w-full max-w-md mx-auto px-4">
+                <div class="grid grid-cols-3 gap-2">
+                    <div></div><button class="ctrl-btn" id="btn-up">▲</button><div></div>
+                    <button class="ctrl-btn" id="btn-left">◀</button>
+                    <div class="w-10 h-10 bg-zinc-900 rounded-full border-2 border-zinc-800 place-self-center"></div>
+                    <button class="ctrl-btn" id="btn-right">▶</button><div></div>
+                    <button class="ctrl-btn" id="btn-down">▼</button><div></div>
+                </div>
+                <div class="flex flex-col gap-6 items-center">
+                    <button class="ctrl-btn bg-red-600 border-red-500 text-white font-bold" id="btn-a">A</button>
+                    <button class="bg-zinc-800 py-3 px-8 rounded-xl text-xs font-bold text-white border border-zinc-700 uppercase" id="btn-start">Start</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
+        // ВЗЛОМ ДЖОЙСТИКОВ (Эмулятор подхватит их как 2 порта Сеги)
+        const myPads = [
+            { id: "P1", index: 0, connected: true, buttons: Array(16).fill(0).map(()=>({pressed:false, value:0})), axes: [0,0], mapping: "standard" },
+            { id: "P2", index: 1, connected: true, buttons: Array(16).fill(0).map(()=>({pressed:false, value:0})), axes: [0,0], mapping: "standard" }
+        ];
+        navigator.getGamepads = () => myPads;
+
         const socket = io();
         let currentRoom = null;
         let playerNum = 1; 
+        let isSolo = true;
+        let blobGameUrl = null; // Сюда скачаем игру
+
+        const btnMap = { UP: 12, DOWN: 13, LEFT: 14, RIGHT: 15, A: 0, START: 9 };
 
         window.app = {
             switch: function(id) {
@@ -84,7 +104,11 @@
             },
             
             launchSolo: function() {
-                this.loadEmulator(true);
+                isSolo = true; playerNum = 1;
+                this.switch('screen-sync');
+                document.getElementById('sync-status').innerText = "ЗАГРУЗКА ИГРЫ...";
+                document.getElementById('room-code').style.display = 'none';
+                this.downloadRom();
             },
             
             goExternal: function() {
@@ -94,10 +118,10 @@
             },
 
             createLobby: function() {
-                playerNum = 1;
+                playerNum = 1; isSolo = false;
                 currentRoom = Math.random().toString(36).substring(2, 6).toUpperCase();
                 document.getElementById('room-code').innerText = currentRoom;
-                this.switch('screen-wait');
+                this.switch('screen-sync');
                 socket.emit('createRoom', currentRoom);
             },
 
@@ -106,33 +130,50 @@
             joinLobby: function() {
                 const code = document.getElementById('join-input').value.toUpperCase();
                 if(code.length !== 4) return;
-                playerNum = 2;
+                playerNum = 2; isSolo = false;
                 currentRoom = code;
+                this.switch('screen-sync');
+                document.getElementById('sync-status').innerText = "ПОДКЛЮЧЕНИЕ...";
+                document.getElementById('room-code').innerText = code;
                 socket.emit('joinRoom', currentRoom);
             },
 
-            loadEmulator: function(isSolo = false) {
-                this.switch('screen-game');
-
-                if (!isSolo) {
-                    // Показываем инструкцию для подключения
-                    const instBox = document.getElementById('netplay-instruction');
-                    const instText = document.getElementById('instruction-text');
-                    instBox.style.display = 'block';
+            // === МАГИЯ СИНХРОНИЗАЦИИ ===
+            downloadRom: async function() {
+                document.getElementById('sync-status').innerText = "СКАЧИВАНИЕ ИГРЫ...";
+                document.getElementById('sync-desc').innerText = "Пожалуйста, подождите";
+                
+                try {
+                    // Качаем игру в оперативную память
+                    const res = await fetch('/battletoads.bin');
+                    const blob = await res.blob();
+                    blobGameUrl = URL.createObjectURL(blob);
                     
-                    if (playerNum === 1) {
-                        instText.innerHTML = `1. Нажми кнопку <b class="text-cyan-400">МЕНЮ</b> (внизу экрана)<br>2. Выбери <b class="text-cyan-400">Netplay</b> -> <b class="text-cyan-400">Host Session</b><br>3. Продиктуй новый код другу!`;
+                    if (isSolo) {
+                        this.bootEmulator(); // В соло стартуем сразу
                     } else {
-                        instText.innerHTML = `1. Нажми кнопку <b class="text-cyan-400">МЕНЮ</b> (внизу экрана)<br>2. Выбери <b class="text-cyan-400">Netplay</b> -> <b class="text-cyan-400">Join Session</b><br>3. Введи код от Хоста!`;
+                        document.getElementById('sync-status').innerText = "ОЖИДАНИЕ СОПЕРНИКА...";
+                        document.getElementById('sync-desc').innerText = "Игра готова. Ждем второй телефон.";
+                        socket.emit('playerReady', currentRoom); // Говорим серверу: Я ГОТОВ
                     }
+                } catch (e) {
+                    alert("Ошибка скачивания: " + e.message);
                 }
+            },
+
+            bootEmulator: function() {
+                this.switch('screen-game');
 
                 window.EJS_player = '#game-container';
                 window.EJS_core = 'sega';
-                window.EJS_gameUrl = '/battletoads.bin'; 
+                window.EJS_gameUrl = blobGameUrl; // БЕРЕМ ИГРУ ИЗ ОЗУ!
                 window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/'; 
                 window.EJS_startOnLoaded = true;
-                window.EJS_VirtualGamepad = true; // Включаем родные мобильные кнопки!
+                window.EJS_VirtualGamepad = false; // ОТКЛЮЧАЕМ РОДНЫЕ КНОПКИ
+                
+                window.EJS_onGameStart = function() {
+                    if (window.EJS_emulator) window.EJS_emulator.setSettings({ p2_type: 1 });
+                };
 
                 const s = document.createElement('script');
                 s.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
@@ -142,14 +183,47 @@
 
         window.onload = () => {
             const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('mode') === 'netplay') {
-                app.switch('screen-lobby');
-            }
+            if (urlParams.get('mode') === 'netplay') app.switch('screen-lobby');
         };
 
-        socket.on('syncStart', () => {
-            app.loadEmulator(false);
+        // Сервер командует: Начинайте качать!
+        socket.on('startDownload', () => {
+            app.downloadRom();
         });
+
+        // Сервер командует: ОБА СКАЧАЛИ, СТАРТ!
+        socket.on('bootEngine', () => {
+            app.bootEmulator();
+        });
+
+        // Получаем нажатия друга
+        socket.on('inputSync', (data) => {
+            if (isSolo) return;
+            const padIdx = data.player - 1; 
+            const bIdx = btnMap[data.btn];
+            myPads[padIdx].buttons[bIdx] = { pressed: data.state, value: data.state ? 1 : 0 };
+        });
+
+        // Жмем свои HTML-кнопки
+        function bind(id, k) {
+            const el = document.getElementById(id);
+            const handle = (isDown) => {
+                const myIdx = playerNum - 1;
+                const bIdx = btnMap[k];
+                // Жмем у себя в виртуальном джойстике
+                myPads[myIdx].buttons[bIdx] = { pressed: isDown, value: isDown ? 1 : 0 };
+                // Отправляем другу
+                if(!isSolo && currentRoom) {
+                    socket.emit('inputSync', { roomId: currentRoom, player: playerNum, btn: k, state: isDown });
+                }
+            };
+            el.onpointerdown = (e) => { e.preventDefault(); handle(true); };
+            el.onpointerup = (e) => { e.preventDefault(); handle(false); };
+            el.onpointerleave = (e) => { e.preventDefault(); handle(false); };
+        }
+
+        bind('btn-up', 'UP'); bind('btn-down', 'DOWN'); bind('btn-left', 'LEFT'); bind('btn-right', 'RIGHT');
+        bind('btn-a', 'A'); bind('btn-start', 'START');
     </script>
 </body>
 </html>
