@@ -1,18 +1,12 @@
 const express = require('express');
-const { ExpressPeerServer } = require('peer');
-const http = require('http');
-
 const app = express();
-const server = http.createServer(app);
+const path = require('path');
 
-// Раздаем статику
-app.use(express.static('public'));
+// Раздаем статику из public
+app.use(express.static(path.join(__dirname, 'public')));
 
-// Подключаем PeerServer (сигнальный сервер для P2P)
-const peerServer = ExpressPeerServer(server, {
-    path: '/myapp'
+// Обработка запуска
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
 });
-
-app.use('/peerjs', peerServer);
-
-server.listen(process.env.PORT || 3000, () => console.log('Arena P2P активна'));
