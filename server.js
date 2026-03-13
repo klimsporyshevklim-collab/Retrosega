@@ -11,29 +11,35 @@ app.use(express.static('public'));
 const rooms = {};
 
 io.on('connection', (socket) => {
-    // Создание лобби
     socket.on('createRoom', (roomId) => {
         socket.join(roomId);
-        rooms[roomId] = { host: socket.id, guest: null };
-        console.log(`Лобби создано: ${roomId}`);
+        rooms[roomId] = { host: socket.id, guest: null, readyCount: 0 };
     });
 
-    // Подключение к лобби
     socket.on('joinRoom', (roomId) => {
         if(rooms[roomId]) {
             socket.join(roomId);
             rooms[roomId].guest = socket.id;
-            // Команда обоим игрокам: ЗАПУСК ЭМУЛЯТОРА!
-            io.to(roomId).emit('syncStart'); 
-            console.log(`Игрок 2 зашел в лобби: ${roomId}`);
+            // Команда обоим: "Начинайте скачивать игру в память!"
+            io.to(roomId).emit('startDownload'); 
         }
     });
 
-    // Пересылка кнопок от одного игрока другому
+    // Игрок сообщает, что файл игры скачан
+    socket.on('playerReady', (roomId) => {
+        if(rooms[roomId]) {
+            rooms[roomId].readyCount++;
+            // Если ОБА игрока скачали игру - даем команду на одновременный запуск
+            if(rooms[roomId].readyCount === 2) {
+                io.to(roomId).emit('bootEngine');
+            }
+        }
+    });
+
+    // Пересылка кнопок
     socket.on('inputSync', (data) => {
         socket.to(data.roomId).emit('inputSync', data);
     });
 });
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Сервер Арены запущен на порту ${PORT}`));
+server.listen(process.env.PORT || 3000, () => console.log('Арена запущена'));
