@@ -2,26 +2,32 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PIXEL ARENA</title>
-    <!-- Официальный загрузчик EmulatorJS из облака -->
-    <script src="https://cdn.emulatorjs.org/stable/data/loader.js"></script>
     <style>
-        body { margin: 0; background: #000; display: flex; flex-direction: column; height: 100vh; }
-        #game-container { flex: 1; width: 100vw; }
+        body { margin: 0; background: #000; color: #fff; font-family: sans-serif; }
+        #error-log { color: red; padding: 20px; white-space: pre-wrap; font-size: 12px; }
+        #game-container { width: 100vw; height: 100vh; }
     </style>
 </head>
 <body>
+    <div id="error-log"></div>
     <div id="game-container"></div>
+    
+    <script>
+        // Детектор ошибок
+        window.onerror = function(msg, url, line) {
+            document.getElementById('error-log').innerText = "ОШИБКА: " + msg + "\nСтрока: " + line;
+            return false;
+        };
+    </script>
+    
+    <script src="https://cdn.emulatorjs.org/stable/data/loader.js"></script>
     <script>
         window.EJS_player = '#game-container';
-        window.EJS_core = 'sega'; // Ядро SEGA
-        window.EJS_gameUrl = '/battletoads.bin'; // Твой файл игры
-        window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/'; // Облачный движок
+        window.EJS_core = 'sega';
+        window.EJS_gameUrl = '/battletoads.bin'; 
+        window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
         window.EJS_startOnLoaded = true;
-        
-        // ВКЛЮЧАЕМ МУЛЬТИПЛЕЕР
-        // Это заставит эмулятор показать иконку "Netplay" (два монитора) внизу
         window.EJS_netplayServer = "wss://netplay.emulatorjs.org";
     </script>
 </body>
