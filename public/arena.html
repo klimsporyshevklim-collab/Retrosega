@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pixel Arena - GAME</title>
+    <script src="https://cdn.emulatorjs.org/stable/data/loader.js"></script>
+    <style>
+        body { margin: 0; background: #000; overflow: hidden; }
+        #game-container { width: 100vw; height: 100vh; }
+    </style>
+</head>
+<body>
+    <div id="game-container"></div>
+    <script>
+        window.EJS_player = '#game-container';
+        window.EJS_core = 'sega';
+        window.EJS_gameUrl = '/battletoads.bin'; 
+        window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
+        window.EJS_startOnLoaded = true;
+        // Включаем встроенный мультиплеер (Netplay)
+        window.EJS_netplayServer = "wss://netplay.emulatorjs.org";
+    </script>
+</body>
+</html>
