@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html>
-<head>
-    <script src="/loader.js"></script>
-</head>
+<head><meta charset="UTF-8"><title>Pixel Arena</title></head>
 <body>
     <div id="game-container" style="width:100vw; height:100vh;"></div>
+    
+    <!-- Обрати внимание на путь к файлам! -->
+    <script src="/loader.js"></script>
     <script>
         window.EJS_player = '#game-container';
         window.EJS_core = 'sega';
@@ -12,17 +13,13 @@
         window.EJS_pathtodata = '/data/';
         window.EJS_startOnLoaded = true;
 
-        // "Переводчик": выводит дамп памяти в консоль при нажатии клавиши 'D'
-        window.EJS_onGameStart = () => {
+        // Твой "Дебаггер"
+        window.onload = () => {
             window.addEventListener('keydown', (e) => {
                 if (e.key === 'd') {
-                    // Выгружаем память эмулятора
-                    const memory = window.EJS_emulator.memory;
-                    console.log("--- DUMP ---");
-                    // Выведем первые 100 байт оперативной памяти
-                    for(let i=0; i<100; i++) {
-                        console.log("Addr: " + i + " Val: " + memory.read(i));
-                    }
+                    console.log("Memory dump triggered");
+                    // Проверка, видит ли эмулятор память
+                    console.log(window.EJS_emulator.memory);
                 }
             });
         };
