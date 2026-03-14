@@ -1,34 +1,31 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>PIXEL ARENA</title>
-    <style>
-        body { margin: 0; background: #000; color: #fff; font-family: sans-serif; }
-        #error-log { color: red; padding: 20px; white-space: pre-wrap; font-size: 12px; }
-        #game-container { width: 100vw; height: 100vh; }
-    </style>
+    <script src="/loader.js"></script>
 </head>
 <body>
-    <div id="error-log"></div>
-    <div id="game-container"></div>
-    
-    <script>
-        // Детектор ошибок
-        window.onerror = function(msg, url, line) {
-            document.getElementById('error-log').innerText = "ОШИБКА: " + msg + "\nСтрока: " + line;
-            return false;
-        };
-    </script>
-    
-    <script src="https://cdn.emulatorjs.org/stable/data/loader.js"></script>
+    <div id="game-container" style="width:100vw; height:100vh;"></div>
     <script>
         window.EJS_player = '#game-container';
         window.EJS_core = 'sega';
-        window.EJS_gameUrl = '/battletoads.bin'; 
-        window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
+        window.EJS_gameUrl = '/battletoads.bin';
+        window.EJS_pathtodata = '/data/';
         window.EJS_startOnLoaded = true;
-        window.EJS_netplayServer = "wss://netplay.emulatorjs.org";
+
+        // "Переводчик": выводит дамп памяти в консоль при нажатии клавиши 'D'
+        window.EJS_onGameStart = () => {
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'd') {
+                    // Выгружаем память эмулятора
+                    const memory = window.EJS_emulator.memory;
+                    console.log("--- DUMP ---");
+                    // Выведем первые 100 байт оперативной памяти
+                    for(let i=0; i<100; i++) {
+                        console.log("Addr: " + i + " Val: " + memory.read(i));
+                    }
+                }
+            });
+        };
     </script>
 </body>
 </html>
