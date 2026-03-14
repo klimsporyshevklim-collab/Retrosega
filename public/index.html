@@ -1,41 +1,46 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
-    <style>
-        body { margin: 0; background: #000; overflow: hidden; }
-        #game-container { width: 100vw; height: 100vh; }
-        #debug-panel { 
-            position: absolute; top: 10px; left: 10px; 
-            background: rgba(0,0,0,0.8); color: #0f0; 
-            padding: 10px; font-family: monospace; z-index: 999;
-        }
-    </style>
-</head>
-<body>
-    <div id="debug-panel">DEBUG: Ожидание...</div>
-    <div id="game-container"></div>
-    
+    <meta charset="UTF-8">
+    <title>Pixel Arena - Cloud Gaming</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script src="https://cdn.emulatorjs.org/stable/data/loader.js"></script>
+</head>
+<body style="margin:0; background:#000;">
+    <div id="game-container" style="width:100vw; height:100vh;"></div>
+    
     <script>
+        // Настройка
         window.EJS_player = '#game-container';
         window.EJS_core = 'sega';
         window.EJS_gameUrl = '/battletoads.bin';
         window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
         window.EJS_startOnLoaded = true;
 
-        // "Переводчик" (Bridge)
-        window.EJS_onGameStart = () => {
-            setInterval(() => {
-                const mem = window.EJS_emulator.memory;
-                // Читаем несколько адресов памяти
-                const val1 = mem.read(0xFFC001);
-                const val2 = mem.read(0xFFC002);
-                
-                // Выводим прямо поверх игры
-                document.getElementById('debug-panel').innerText = 
-                    "P1_X: " + val1 + "\nP1_Y: " + val2;
-            }, 100);
+        // Стрим-магия
+        const peer = new Peer();
+        
+        window.EJS_ready = () => {
+            const canvas = document.querySelector('canvas');
+            const stream = canvas.captureStream(30); // Захват игры как видео
+
+            peer.on('call', call => {
+                call.answer(stream); // Отдаем видео Игроку 2
+            });
+
+            // Игрок 2 подключается и видит игру
+            peer.on('connection', conn => {
+                conn.on('data', data => {
+                    // Игрок 2 шлет команды, мы их выполняем
+                    simulateKey(data.btn, data.state);
+                });
+            });
         };
+
+        function simulateKey(btn, state) {
+            const ev = new KeyboardEvent(state ? 'keydown' : 'keyup', { code: btn, bubbles: true });
+            document.dispatchEvent(ev);
+        }
     </script>
 </body>
 </html>
