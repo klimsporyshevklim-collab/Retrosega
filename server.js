@@ -1,15 +1,22 @@
-const express = require('express');
-const app = express();
-app.use(express.static('public'));
-const server = require('http').createServer(app);
-const { Server } = require('socket.io');
-const io = new Server(server);
+// server.js - супер-легкий
+const http = require('http');
+const fs = require('fs');
+const path = require('path');
 
-// Сигнальный сервер: игроки обмениваются здесь только ID своих сессий
-io.on('connection', (socket) => {
-    socket.on('offer', (data) => socket.broadcast.emit('offer', data));
-    socket.on('answer', (data) => socket.broadcast.emit('answer', data));
-    socket.on('candidate', (data) => socket.broadcast.emit('candidate', data));
+const server = http.createServer((req, res) => {
+    // Раздаем файлы из папки public
+    let filePath = req.url === '/' ? '/index.html' : req.url;
+    let fullPath = path.join(__dirname, 'public', filePath);
+
+    fs.readFile(fullPath, (err, content) => {
+        if (err) {
+            res.writeHead(404);
+            res.end('File not found');
+        } else {
+            res.writeHead(200);
+            res.end(content);
+        }
+    });
 });
 
-server.listen(process.env.PORT || 3000, () => console.log('Сигнальный сервер запущен'));
+server.listen(process.env.PORT || 3000);
