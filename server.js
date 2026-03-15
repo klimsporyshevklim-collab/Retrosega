@@ -1,22 +1,8 @@
-// server.js - супер-легкий
-const http = require('http');
-const fs = require('fs');
+const express = require('express');
 const path = require('path');
+const app = express();
 
-const server = http.createServer((req, res) => {
-    // Раздаем файлы из папки public
-    let filePath = req.url === '/' ? '/index.html' : req.url;
-    let fullPath = path.join(__dirname, 'public', filePath);
+// Указываем, что файлы лежат в public
+app.use(express.static(path.join(__dirname, 'public')));
 
-    fs.readFile(fullPath, (err, content) => {
-        if (err) {
-            res.writeHead(404);
-            res.end('File not found');
-        } else {
-            res.writeHead(200);
-            res.end(content);
-        }
-    });
-});
-
-server.listen(process.env.PORT || 3000);
+app.listen(process.env.PORT || 3000, () => console.log('Арена запущена'));
