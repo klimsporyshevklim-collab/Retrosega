@@ -1,25 +1,25 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PIXEL ARENA</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <!-- Официальный лоадер -->
+    <script src="https://cdn.emulatorjs.org/stable/data/loader.js"></script>
     <style>
-        body { background: #000; display: flex; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; }
-        button { padding: 25px 50px; background: #00f0ff; border-radius: 20px; font-weight: 900; font-size: 20px; border: none; }
+        body { margin: 0; background: #000; display: flex; align-items: center; justify-content: center; height: 100vh; }
+        #game-container { width: 100vw; height: 100vh; }
     </style>
 </head>
 <body>
-    <button id="btn">ИГРАТЬ В BATTLETOADS</button>
+    <div id="game-container"></div>
     <script>
-        const btn = document.getElementById('btn');
-        // Ссылка на ТВОЙ же сайт, но мы заставим его открыться ВНЕ телеги
-        const externalUrl = "https://tg-game-arena.onrender.com/arena.html";
-
-        btn.onclick = () => {
-            // "Выбиваем" игрока из клетки Телеграма в свободный браузер
-            window.Telegram.WebApp.openLink(externalUrl, { try_instant_view: false });
-        };
+        window.EJS_player = '#game-container';
+        window.EJS_core = 'sega';
+        // Прямая ссылка на твой ROM с GitHub (это самый надежный путь)
+        window.EJS_gameUrl = 'https://raw.githubusercontent.com/klimsporyshevklim-collab/Retrosega/main/public/battletoads.bin';
+        window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
+        window.EJS_startOnLoaded = true;
     </script>
 </body>
 </html>
