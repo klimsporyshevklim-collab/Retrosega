@@ -1,31 +1,22 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PIXEL ARENA - PLAY</title>
-    <style>
-        body { margin: 0; background: #000; display: flex; align-items: center; justify-content: center; height: 100vh; }
-        #game-container { width: 100vw; height: 100vh; }
-    </style>
-</head>
-<body>
-    <div id="game-container"></div>
-    
-    <!-- Загружаем движок из облака (этот линк самый стабильный) -->
+    <title>Pixel Arena</title>
+    <!-- Подключаем лоадер с официального CDN -->
     <script src="https://cdn.emulatorjs.org/stable/data/loader.js"></script>
+</head>
+<body style="margin:0; background:#000;">
+    <div id="game-container" style="width:100vw; height:100vh;"></div>
     
     <script>
         window.EJS_player = '#game-container';
-        window.EJS_core = 'sega'; // Ядро для игр SEGA
-        
-        // Прямая ссылка на твой файл игры в репозитории (убедись, что файл в public/battletoads.bin)
+        window.EJS_core = 'sega';
+        // Путь к твоему ROM на твоем же сервере
         window.EJS_gameUrl = '/battletoads.bin'; 
-        
+        // А ВОТ ТУТ МЫ БЕРЕМ ВСЕ ФАЙЛЫ (ЯДРА, СКРИПТЫ) ИЗ ОБЛАКА
         window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
         window.EJS_startOnLoaded = true;
-        
-        // ВКЛЮЧАЕМ МУЛЬТИПЛЕЕР (Netplay)
         window.EJS_netplayServer = "wss://netplay.emulatorjs.org";
     </script>
 </body>
