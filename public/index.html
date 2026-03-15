@@ -1,57 +1,28 @@
 <!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PIXEL ARENA</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <style>
-        body { margin:0; background:#000; color:#fff; font-family:sans-serif; }
-        #menu { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; }
-        button { padding:20px 40px; background:#00f0ff; color:#000; border-radius:15px; font-weight:bold; border:none; cursor:pointer; }
-        #game-container { display: none; width: 100vw; height: 100vh; }
-    </style>
-</head>
+<html>
+<head><meta charset="UTF-8"><title>Pixel Arena</title></head>
 <body>
-
-    <!-- Меню -->
-    <div id="menu">
-        <h1 class="mb-8">PIXEL ARENA</h1>
-        <button id="btn">ЗАПУСТИТЬ ТУРНИР</button>
-    </div>
-
-    <!-- Эмулятор -->
-    <div id="game-container"></div>
-
-    <script src="https://cdn.emulatorjs.org/stable/data/loader.js"></script>
+    <div id="game-container" style="width:100vw; height:100vh;"></div>
+    
+    <!-- Обрати внимание на путь к файлам! -->
+    <script src="/loader.js"></script>
     <script>
-        const btn = document.getElementById('btn');
-        
-        btn.onclick = () => {
-            // Если в Телеграме — перекидываем в браузер на ЭТУ ЖЕ страницу
-            if (window.Telegram && window.Telegram.WebApp) {
-                window.Telegram.WebApp.openLink(window.location.href + "?play=true");
-            } else {
-                start();
-            }
+        window.EJS_player = '#game-container';
+        window.EJS_core = 'sega';
+        window.EJS_gameUrl = '/battletoads.bin';
+        window.EJS_pathtodata = '/data/';
+        window.EJS_startOnLoaded = true;
+
+        // Твой "Дебаггер"
+        window.onload = () => {
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'd') {
+                    console.log("Memory dump triggered");
+                    // Проверка, видит ли эмулятор память
+                    console.log(window.EJS_emulator.memory);
+                }
+            });
         };
-
-        function start() {
-            document.getElementById('menu').style.display = 'none';
-            document.getElementById('game-container').style.display = 'block';
-            
-            window.EJS_player = '#game-container';
-            window.EJS_core = 'sega';
-            window.EJS_gameUrl = '/battletoads.bin';
-            window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
-            window.EJS_startOnLoaded = true;
-            window.EJS_netplayServer = "wss://netplay.emulatorjs.org";
-        }
-
-        // Автозапуск, если открыто в браузере с параметром
-        if (new URLSearchParams(window.location.search).get('play') === 'true') {
-            start();
-        }
     </script>
 </body>
 </html>
