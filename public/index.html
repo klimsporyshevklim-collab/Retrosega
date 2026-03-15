@@ -2,102 +2,76 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>PIXEL ARENA | RETRO STATION</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PIXEL ARENA</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
-        body { background: #0a0a0a; font-family: 'Press Start 2P', cursive; color: #00f0ff; }
-        .crt-tv { border: 8px solid #333; border-radius: 40px; background: #111; box-shadow: inset 0 0 50px #000; position: relative; }
-        .game-btn:hover { background: #00f0ff; color: #000; }
-        .category-btn { border: 2px solid #00f0ff; padding: 10px 20px; cursor: pointer; }
-        .category-btn:hover { background: #00f0ff; color: #000; }
+        body { background: #000; color: #fff; font-family: sans-serif; }
+        .screen { display: none; width: 100vw; height: 100vh; }
+        .active { display: flex; flex-direction: column; }
+        iframe { width: 100%; height: 100%; border: none; }
     </style>
 </head>
-<body class="p-4">
-    <h1 class="text-2xl text-center mb-8 uppercase text-cyan-400">Pixel Arena</h1>
-    
-    <!-- Фильтры -->
-    <div class="flex justify-center gap-4 mb-8">
-        <button class="category-btn" onclick="filter('SEGA')">SEGA</button>
-        <button class="category-btn" onclick="filter('NINTENDO')">NES</button>
-        <button class="category-btn" onclick="filter('PLAYSTATION')">PS1</button>
-        <button class="category-btn" onclick="filter('ARCADE')">ARCADE</button>
+<body>
+
+    <!-- 1. ЭКРАН МЕНЮ -->
+    <div id="screen-menu" class="screen active p-4">
+        <h1 class="text-3xl font-black text-cyan-400 mb-6 uppercase italic text-center">PIXEL ARENA</h1>
+        
+        <!-- Вкладки -->
+        <div class="grid grid-cols-2 gap-2 mb-6 w-full max-w-sm">
+            <button onclick="render('SEGA')" class="bg-blue-900 p-3 rounded-lg font-bold text-xs">SEGA</button>
+            <button onclick="render('NINTENDO')" class="bg-red-900 p-3 rounded-lg font-bold text-xs">NES</button>
+            <button onclick="render('PLAYSTATION')" class="bg-purple-900 p-3 rounded-lg font-bold text-xs">PS1</button>
+            <button onclick="render('ARCADE')" class="bg-green-900 p-3 rounded-lg font-bold text-xs">ARCADE</button>
+        </div>
+
+        <div id="game-list" class="grid grid-cols-2 gap-3 w-full max-w-sm overflow-y-auto pb-20"></div>
     </div>
 
-    <!-- Сетка игр -->
-    <div id="game-list" class="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-5xl mx-auto"></div>
-
-    <!-- Игровое окно -->
-    <div id="player" class="hidden fixed inset-0 bg-black z-50 flex flex-col">
-        <button onclick="closeGame()" class="absolute top-2 left-2 z-50 bg-red-600 text-white px-4 py-2 rounded">НАЗАД</button>
-        <div id="embed-container" class="flex-1"></div>
+    <!-- 2. ЭКРАН ИГРЫ -->
+    <div id="screen-game" class="screen">
+        <button onclick="closeGame()" class="absolute top-2 left-2 z-50 bg-red-600 px-4 py-2 rounded-full font-bold text-sm">НАЗАД</button>
+        <div id="embed-container" class="w-full h-full"></div>
     </div>
 
     <script>
         const allGames = [
-            // SEGA
             { name: "Battletoads", system: "SEGA", url: "https://www.retrogames.cc/embed/16901-battletoads-world.html" },
             { name: "Sonic 2", system: "SEGA", url: "https://www.retrogames.cc/embed/17236-sonic-the-hedgehog-2-world-rev-a.html" },
             { name: "Mortal Kombat 3", system: "SEGA", url: "https://www.retrogames.cc/embed/19038-mortal-kombat-3-europe.html" },
-            { name: "Comix Zone", system: "SEGA", url: "https://www.retrogames.cc/embed/16910-comix-zone-europe.html" },
-            { name: "Aladdin", system: "SEGA", url: "https://www.retrogames.cc/embed/29880-aladdin-europe.html" },
-            { name: "Sunset Riders", system: "SEGA", url: "https://www.retrogames.cc/embed/16748-sunset-riders-usa.html" },
-            { name: "Alien 3", system: "SEGA", url: "https://www.retrogames.cc/embed/16954-alien-3-usa-europe.html" },
-            { name: "Joe & Mac", system: "SEGA", url: "https://www.retrogames.cc/embed/28572-joe-mac-usa.html" },
-            { name: "Spider-Man", system: "SEGA", url: "https://www.retrogames.cc/embed/28292-spider-man-world-sega.html" },
-            { name: "Beavis & Butt-Head", system: "SEGA", url: "https://www.retrogames.cc/embed/29923-beavis-and-butt-head-europe.html" },
-            { name: "Jurassic Park", system: "SEGA", url: "https://www.retrogames.cc/embed/28505-jurassic-park-rampage-edition-usa-europe.html" },
-            { name: "X-Men 2", system: "SEGA", url: "https://www.retrogames.cc/embed/29870-x-men-2-clone-wars-usa-europe.html" },
-            { name: "Toe Jam & Earl", system: "SEGA", url: "https://www.retrogames.cc/embed/28252-toe-jam-earl-in-panic-auf-funkotron-germany.html" },
-            { name: "Tiny Toon Adventures", system: "SEGA", url: "https://www.retrogames.cc/embed/29804-tiny-toon-adventures-buster-s-hidden-treasure-europe.html" },
-            { name: "AAAHH!!! Real Monsters", system: "SEGA", url: "https://www.retrogames.cc/embed/16727-aaahh-real-monsters-usa-europe.html" },
-            { name: "Scooby Doo Mystery", system: "SEGA", url: "https://www.retrogames.cc/embed/28473-scooby-doo-mystery-usa.html" },
-            { name: "Home Alone 2", system: "SEGA", url: "https://www.retrogames.cc/embed/17237-home-alone-2-lost-in-new-york-usa.html" },
-            // NINTENDO
             { name: "Super Mario Bros", system: "NINTENDO", url: "https://www.retrogames.cc/embed/16853-super-mario-bros-usa.html" },
-            { name: "Battle City", system: "NINTENDO", url: "https://www.retrogames.cc/embed/16882-battle-city-japan.html" },
             { name: "Contra", system: "NINTENDO", url: "https://www.retrogames.cc/embed/16841-contra-usa.html" },
-            { name: "Duck Tales", system: "NINTENDO", url: "https://www.retrogames.cc/embed/16972-duck-tales-usa.html" },
-            { name: "Donkey Kong Country", system: "NINTENDO", url: "https://www.retrogames.cc/embed/23005-donkey-kong-country-usa.html" },
-            { name: "Kirby - Squeak Squad", system: "NINTENDO", url: "https://www.retrogames.cc/embed/35871-kirby-squeak-squad-usa.html" },
-            { name: "Pokemon Crystal", system: "NINTENDO", url: "https://www.retrogames.cc/embed/44705-pokemon-perfect-crystal-2020-update.html" },
-            { name: "Super Bomberman 4", system: "NINTENDO", url: "https://www.retrogames.cc/embed/19846-super-bomberman-4-english-translated.html" },
-            { name: "Dragon Ball Z", system: "NINTENDO", url: "https://www.retrogames.cc/embed/28096-dragon-ball-z-supersonic-warriors-k-projectg.html" },
-            // PLAYSTATION
             { name: "Tekken 3", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/40238-tekken-3.html" },
             { name: "Crash Bandicoot", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/40784-crash-bandicoot.html" },
-            { name: "Resident Evil 3", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/41501-resident-evil-3.html" },
-            { name: "Silent Hill", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/41684-silent-hill.html" },
-            { name: "Grand Theft Auto 2", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/41828-grand-theft-auto-2.html" },
-            { name: "Metal Gear Solid", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/43266-metal-gear-solid-disc-1.html" },
-            // ARCADE
             { name: "Street Fighter II", system: "ARCADE", url: "https://www.retrogames.cc/embed/17395-street-fighter-ii-world-910214.html" },
-            { name: "Metal Slug", system: "ARCADE", url: "https://www.retrogames.cc/embed/23611-metal-slug-super-vehicle-001.html" },
-            { name: "Pac-Man", system: "ARCADE", url: "https://www.retrogames.cc/embed/23936-pac-man-midway.html" },
-            { name: "1942", system: "ARCADE", url: "https://www.retrogames.cc/embed/16668-1942-arcade.html" }
+            { name: "Metal Slug", system: "ARCADE", url: "https://www.retrogames.cc/embed/23611-metal-slug-super-vehicle-001.html" }
         ];
 
         function render(system) {
             const list = document.getElementById('game-list');
             list.innerHTML = '';
             allGames.filter(g => g.system === system).forEach(game => {
-                list.innerHTML += `<div class="game-card p-4 rounded-xl cursor-pointer bg-zinc-900 border-2 border-zinc-700 text-center" onclick="openGame('${game.url}')">
-                    <p class="text-[10px] uppercase">${game.name}</p>
-                </div>`;
+                list.innerHTML += `
+                    <div class="bg-zinc-900 p-4 rounded-xl border border-zinc-700 text-center cursor-pointer" onclick="openGame('${game.url}')">
+                        <p class="text-[10px] font-bold">${game.name}</p>
+                    </div>`;
             });
         }
-        
+
         function openGame(url) {
-            document.getElementById('player').style.display = 'block';
-            document.getElementById('embed-container').innerHTML = `<iframe src="${url}" class="w-full h-full border-none"></iframe>`;
+            document.getElementById('screen-menu').classList.remove('active');
+            document.getElementById('screen-game').classList.add('active');
+            document.getElementById('embed-container').innerHTML = `<iframe src="${url}" style="width:100%; height:100%; border:none;" allowfullscreen></iframe>`;
         }
 
         function closeGame() {
-            document.getElementById('player').style.display = 'none';
+            document.getElementById('screen-game').classList.remove('active');
+            document.getElementById('screen-menu').classList.add('active');
             document.getElementById('embed-container').innerHTML = '';
         }
 
-        render('SEGA');
+        render('SEGA'); // Грузим Сегу по умолчанию
     </script>
 </body>
 </html>
