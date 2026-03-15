@@ -2,14 +2,73 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Pixel Arena</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>PIXEL ARENA | REРО-ТУРНИР</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { margin:0; background:#000; display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; font-family:sans-serif; }
-        a { padding:20px 40px; background:#00f0ff; color:#000; border-radius:15px; font-weight:bold; text-decoration:none; }
+        body { background: #050505; color: #fff; font-family: 'Courier New', monospace; }
+        .game-card { border: 1px solid #333; transition: all 0.3s; }
+        .game-card:hover { border-color: #00f0ff; background: #111; transform: scale(1.02); }
+        .iframe-container { width: 100vw; height: 100vh; position: fixed; top:0; left:0; z-index: 100; display: none; }
     </style>
 </head>
-<body>
-    <h1 style="color:#fff; margin-bottom: 20px;">PIXEL ARENA</h1>
-    <a href="/arena">ЗАПУСТИТЬ ТУРНИР</a>
+<body class="p-4">
+    <h1 class="text-3xl font-black text-cyan-400 text-center mb-8 uppercase italic tracking-widest">PIXEL ARENA</h1>
+    
+    <div id="game-list" class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
+        <!-- Сюда JS вставит все игры -->
+    </div>
+
+    <div id="player" class="iframe-container">
+        <button onclick="closeGame()" class="absolute top-4 right-4 z-[101] bg-red-600 px-6 py-2 rounded-full font-bold uppercase shadow-lg">ВЫХОД</button>
+        <div id="embed-container" class="w-full h-full"></div>
+    </div>
+
+    <script>
+        const games = [
+            { name: "AAAHH!!! Real Monsters", url: "https://www.retrogames.cc/embed/16727-aaahh-real-monsters-usa-europe.html" },
+            { name: "Aladdin", url: "https://www.retrogames.cc/embed/29880-aladdin-europe.html" },
+            { name: "Alien 3", url: "https://www.retrogames.cc/embed/16954-alien-3-usa-europe.html" },
+            { name: "Joe & Mac", url: "https://www.retrogames.cc/embed/28572-joe-mac-usa.html" },
+            { name: "Spider-Man", url: "https://www.retrogames.cc/embed/28292-spider-man-world-sega.html" },
+            { name: "Battletoads", url: "https://www.retrogames.cc/embed/16901-battletoads-world.html" },
+            { name: "Battletoads & DD", url: "https://www.retrogames.cc/embed/16964-battletoads-double-dragon-usa.html" },
+            { name: "Beavis & Butt-Head", url: "https://www.retrogames.cc/embed/29923-beavis-and-butt-head-europe.html" },
+            { name: "Comix Zone", url: "https://www.retrogames.cc/embed/16910-comix-zone-europe.html" },
+            { name: "Home Alone 2", url: "https://www.retrogames.cc/embed/17237-home-alone-2-lost-in-new-york-usa.html" },
+            { name: "Jurassic Park", url: "https://www.retrogames.cc/embed/28505-jurassic-park-rampage-edition-usa-europe.html" },
+            { name: "Mortal Kombat 3", url: "https://www.retrogames.cc/embed/19038-mortal-kombat-3-europe.html" },
+            { name: "Scooby Doo Mystery", url: "https://www.retrogames.cc/embed/28473-scooby-doo-mystery-usa.html" },
+            { name: "Sonic 2", url: "https://www.retrogames.cc/embed/29946-sonic-the-hedgehog-japan.html" },
+            { name: "Sunset Riders", url: "https://www.retrogames.cc/embed/16748-sunset-riders-usa.html" },
+            { name: "Tiny Toon Adventures", url: "https://www.retrogames.cc/embed/29804-tiny-toon-adventures-buster-s-hidden-treasure-europe.html" },
+            { name: "Toe Jam & Earl", url: "https://www.retrogames.cc/embed/28252-toe-jam-earl-in-panic-auf-funkotron-germany.html" },
+            { name: "Ultimate MK 3", url: "https://www.retrogames.cc/embed/30389-ultimate-mortal-kombat-3-europe.html" },
+            { name: "X-Men 2", url: "https://www.retrogames.cc/embed/29870-x-men-2-clone-wars-usa-europe.html" },
+            { name: "Centipede", url: "https://www.retrogames.cc/embed/41649-centipede.html" },
+            { name: "Ms. Pac-Man", url: "https://www.retrogames.cc/embed/35015-ms-pac-man-usa.html" },
+            { name: "Battle City", url: "https://www.retrogames.cc/embed/16882-battle-city-japan.html" }
+        ];
+
+        const container = document.getElementById('game-list');
+        games.forEach(game => {
+            container.innerHTML += `
+                <div class="game-card p-4 rounded-xl cursor-pointer bg-zinc-900" onclick="openGame('${game.url}')">
+                    <p class="text-center font-bold text-xs truncate">${game.name}</p>
+                </div>
+            `;
+        });
+
+        function openGame(url) {
+            document.getElementById('player').style.display = 'block';
+            document.getElementById('embed-container').innerHTML = 
+                `<iframe src="${url}" class="w-full h-full" allowfullscreen></iframe>`;
+        }
+
+        function closeGame() {
+            document.getElementById('player').style.display = 'none';
+            document.getElementById('embed-container').innerHTML = '';
+        }
+    </script>
 </body>
 </html>
