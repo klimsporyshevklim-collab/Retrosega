@@ -1,46 +1,14 @@
 <!DOCTYPE html>
 <html>
-<head>
-    <title>Pixel Arena P2P</title>
-    <script src="https://cdn.emulatorjs.org/stable/data/loader.js"></script>
-    <script src="/socket.io/socket.io.js"></script>
-</head>
 <body style="margin:0; background:#000;">
-    <div id="game-container" style="width:100vw; height:70vh;"></div>
-    <div id="controls" style="height:30vh; background:#222; color:#fff; display:flex; justify-content:center; gap:20px; align-items:center;">
-        <button onclick="startHost()">СТРИМИТЬ (P1)</button>
-        <button onclick="startJoin()">ПОДКЛЮЧИТЬСЯ (P2)</button>
-    </div>
-
+    <div id="game-container" style="width:100vw; height:100vh;"></div>
+    <script src="https://cdn.emulatorjs.org/stable/data/loader.js"></script>
     <script>
-        const socket = io();
-        const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
-
-        // Настройка эмулятора
         window.EJS_player = '#game-container';
         window.EJS_core = 'sega';
         window.EJS_gameUrl = '/battletoads.bin';
         window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
         window.EJS_startOnLoaded = true;
-
-        async function startHost() {
-            // Захват видео с эмулятора
-            const stream = document.querySelector('canvas').captureStream();
-            stream.getTracks().forEach(track => pc.addTrack(track, stream));
-            
-            const offer = await pc.createOffer();
-            await pc.setLocalDescription(offer);
-            socket.emit('offer', offer);
-        }
-
-        async function startJoin() {
-            // Здесь будет логика получения ответа от сервера
-        }
-
-        // Загрузка движка
-        const s = document.createElement('script');
-        s.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
-        document.body.appendChild(s);
     </script>
 </body>
 </html>
