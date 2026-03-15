@@ -1,39 +1,46 @@
 <!DOCTYPE html>
 <html>
-<body style="background:#000; color:#0f0; font-family:monospace;">
-    <div id="debug" style="position:fixed; top:10px; left:10px; z-index:999;">Ожидание...</div>
-    <div id="game-container" style="width:100vw; height:100vh;"></div>
-    
+<head>
+    <title>Pixel Arena P2P</title>
     <script src="https://cdn.emulatorjs.org/stable/data/loader.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body style="margin:0; background:#000;">
+    <div id="game-container" style="width:100vw; height:70vh;"></div>
+    <div id="controls" style="height:30vh; background:#222; color:#fff; display:flex; justify-content:center; gap:20px; align-items:center;">
+        <button onclick="startHost()">СТРИМИТЬ (P1)</button>
+        <button onclick="startJoin()">ПОДКЛЮЧИТЬСЯ (P2)</button>
+    </div>
+
     <script>
+        const socket = io();
+        const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+
+        // Настройка эмулятора
         window.EJS_player = '#game-container';
         window.EJS_core = 'sega';
         window.EJS_gameUrl = '/battletoads.bin';
         window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
         window.EJS_startOnLoaded = true;
 
-        window.EJS_ready = () => {
-            const mem = window.EJS_emulator.memory;
-            const debug = document.getElementById('debug');
+        async function startHost() {
+            // Захват видео с эмулятора
+            const stream = document.querySelector('canvas').captureStream();
+            stream.getTracks().forEach(track => pc.addTrack(track, stream));
             
-            // "Детектор": ищем байты, которые меняются при движении
-            let lastMem = new Uint8Array(256);
-            
-            setInterval(() => {
-                let changes = [];
-                // Сканируем диапазон памяти, где обычно живут координаты (0xFFC000 - 0xFFC100)
-                for(let i=0; i<256; i++) {
-                    let val = mem.read(0xFFC000 + i);
-                    if (val !== lastMem[i] && val > 0) {
-                        changes.push(`Addr: 0xFFC${i.toString(16).toUpperCase()} Val: ${val}`);
-                    }
-                    lastMem[i] = val;
-                }
-                if(changes.length > 0) {
-                    debug.innerHTML = changes.slice(0, 5).join('<br>');
-                }
-            }, 500); // Проверяем 2 раза в секунду
-        };
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+            socket.emit('offer', offer);
+        }
+
+        async function startJoin() {
+            // Здесь будет логика получения ответа от сервера
+        }
+
+        // Загрузка движка
+        const s = document.createElement('script');
+        s.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
+        document.body.appendChild(s);
     </script>
 </body>
 </html>
