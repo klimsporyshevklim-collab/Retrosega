@@ -2,37 +2,33 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>PIXEL ARENA</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background: #000; color: #fff; font-family: sans-serif; }
-        .screen { display: none; width: 100vw; height: 100vh; }
-        .active { display: flex; flex-direction: column; }
-        iframe { width: 100%; height: 100%; border: none; }
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap');
+        body { background: #050505; color: #fff; font-family: 'Orbitron', sans-serif; }
+        .neon-border { border: 2px solid #00f0ff; box-shadow: 0 0 10px #00f0ff; }
+        .game-btn { background: #1a1a1a; border: 1px solid #333; transition: 0.3s; }
+        .game-btn:active { background: #00f0ff; color: #000; }
     </style>
 </head>
-<body>
-
-    <!-- 1. ЭКРАН МЕНЮ -->
-    <div id="screen-menu" class="screen active p-4">
-        <h1 class="text-3xl font-black text-cyan-400 mb-6 uppercase italic text-center">PIXEL ARENA</h1>
-        
-        <!-- Вкладки -->
-        <div class="grid grid-cols-2 gap-2 mb-6 w-full max-w-sm">
-            <button onclick="render('SEGA')" class="bg-blue-900 p-3 rounded-lg font-bold text-xs">SEGA</button>
-            <button onclick="render('NINTENDO')" class="bg-red-900 p-3 rounded-lg font-bold text-xs">NES</button>
-            <button onclick="render('PLAYSTATION')" class="bg-purple-900 p-3 rounded-lg font-bold text-xs">PS1</button>
-            <button onclick="render('ARCADE')" class="bg-green-900 p-3 rounded-lg font-bold text-xs">ARCADE</button>
+<body class="p-4">
+    <header class="text-center mb-8">
+        <h1 class="text-3xl text-cyan-400 italic tracking-widest uppercase">PIXEL ARENA</h1>
+        <div class="flex flex-wrap justify-center gap-2 mt-4 text-[10px]">
+            <button onclick="render('SEGA')" class="px-3 py-1 bg-blue-900 rounded border border-blue-500">SEGA</button>
+            <button onclick="render('NINTENDO')" class="px-3 py-1 bg-red-900 rounded border border-red-500">NES</button>
+            <button onclick="render('PLAYSTATION')" class="px-3 py-1 bg-purple-900 rounded border border-purple-500">PS1</button>
+            <button onclick="render('ARCADE')" class="px-3 py-1 bg-green-900 rounded border border-green-500">ARCADE</button>
         </div>
+    </header>
 
-        <div id="game-list" class="grid grid-cols-2 gap-3 w-full max-w-sm overflow-y-auto pb-20"></div>
-    </div>
+    <div id="game-list" class="grid grid-cols-2 gap-4 pb-20"></div>
 
-    <!-- 2. ЭКРАН ИГРЫ -->
-    <div id="screen-game" class="screen">
-        <button onclick="closeGame()" class="absolute top-2 left-2 z-50 bg-red-600 px-4 py-2 rounded-full font-bold text-sm">НАЗАД</button>
-        <div id="embed-container" class="w-full h-full"></div>
+    <div id="player" class="hidden fixed inset-0 bg-black z-50">
+        <button onclick="closeGame()" class="absolute top-2 left-2 z-50 bg-red-600 text-white px-4 py-2 rounded-full font-bold text-xs">EXIT</button>
+        <iframe id="game-frame" class="w-full h-full border-none"></iframe>
     </div>
 
     <script>
@@ -40,10 +36,18 @@
             { name: "Battletoads", system: "SEGA", url: "https://www.retrogames.cc/embed/16901-battletoads-world.html" },
             { name: "Sonic 2", system: "SEGA", url: "https://www.retrogames.cc/embed/17236-sonic-the-hedgehog-2-world-rev-a.html" },
             { name: "Mortal Kombat 3", system: "SEGA", url: "https://www.retrogames.cc/embed/19038-mortal-kombat-3-europe.html" },
+            { name: "Comix Zone", system: "SEGA", url: "https://www.retrogames.cc/embed/16910-comix-zone-europe.html" },
+            { name: "Aladdin (SEGA)", system: "SEGA", url: "https://www.retrogames.cc/embed/29880-aladdin-europe.html" },
+            { name: "Sunset Riders", system: "SEGA", url: "https://www.retrogames.cc/embed/16748-sunset-riders-usa.html" },
+            { name: "Alien 3", system: "SEGA", url: "https://www.retrogames.cc/embed/16954-alien-3-usa-europe.html" },
             { name: "Super Mario Bros", system: "NINTENDO", url: "https://www.retrogames.cc/embed/16853-super-mario-bros-usa.html" },
+            { name: "Battle City", system: "NINTENDO", url: "https://www.retrogames.cc/embed/16882-battle-city-japan.html" },
             { name: "Contra", system: "NINTENDO", url: "https://www.retrogames.cc/embed/16841-contra-usa.html" },
+            { name: "Donkey Kong", system: "NINTENDO", url: "https://www.retrogames.cc/embed/23005-donkey-kong-country-usa.html" },
             { name: "Tekken 3", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/40238-tekken-3.html" },
             { name: "Crash Bandicoot", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/40784-crash-bandicoot.html" },
+            { name: "Resident Evil 3", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/41501-resident-evil-3.html" },
+            { name: "Silent Hill", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/41684-silent-hill.html" },
             { name: "Street Fighter II", system: "ARCADE", url: "https://www.retrogames.cc/embed/17395-street-fighter-ii-world-910214.html" },
             { name: "Metal Slug", system: "ARCADE", url: "https://www.retrogames.cc/embed/23611-metal-slug-super-vehicle-001.html" }
         ];
@@ -53,25 +57,23 @@
             list.innerHTML = '';
             allGames.filter(g => g.system === system).forEach(game => {
                 list.innerHTML += `
-                    <div class="bg-zinc-900 p-4 rounded-xl border border-zinc-700 text-center cursor-pointer" onclick="openGame('${game.url}')">
-                        <p class="text-[10px] font-bold">${game.name}</p>
+                    <div class="game-btn p-4 rounded-xl border border-zinc-700 text-center shadow-lg" onclick="openGame('${game.url}')">
+                        <p class="text-[10px] font-bold uppercase">${game.name}</p>
                     </div>`;
             });
         }
-
+        
         function openGame(url) {
-            document.getElementById('screen-menu').classList.remove('active');
-            document.getElementById('screen-game').classList.add('active');
-            document.getElementById('embed-container').innerHTML = `<iframe src="${url}" style="width:100%; height:100%; border:none;" allowfullscreen></iframe>`;
+            document.getElementById('player').style.display = 'block';
+            document.getElementById('game-frame').src = url;
         }
 
         function closeGame() {
-            document.getElementById('screen-game').classList.remove('active');
-            document.getElementById('screen-menu').classList.add('active');
-            document.getElementById('embed-container').innerHTML = '';
+            document.getElementById('player').style.display = 'none';
+            document.getElementById('game-frame').src = '';
         }
 
-        render('SEGA'); // Грузим Сегу по умолчанию
+        render('SEGA');
     </script>
 </body>
 </html>
