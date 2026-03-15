@@ -1,52 +1,38 @@
 <!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PIXEL ARENA</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <style>
-        body { background: #000; color: #fff; display: flex; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; }
-        button { padding: 20px 40px; background: #00f0ff; color: #000; border-radius: 15px; font-weight: bold; cursor: pointer; border: none; }
-    </style>
-</head>
-<body>
-    <button id="btn">ИГРАТЬ В BATTLETOADS</button>
-
+<html>
+<body style="background:#000; color:#0f0; font-family:monospace;">
+    <div id="debug" style="position:fixed; top:10px; left:10px; z-index:999;">Ожидание...</div>
+    <div id="game-container" style="width:100vw; height:100vh;"></div>
+    
+    <script src="https://cdn.emulatorjs.org/stable/data/loader.js"></script>
     <script>
-        const btn = document.getElementById('btn');
-        // Ссылка на сам сайт, чтобы он открылся снаружи
-        const siteUrl = "https://tg-game-arena.onrender.com/?play=true";
+        window.EJS_player = '#game-container';
+        window.EJS_core = 'sega';
+        window.EJS_gameUrl = '/battletoads.bin';
+        window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
+        window.EJS_startOnLoaded = true;
 
-        btn.onclick = () => {
-            // Если мы внутри Телеграма, выкидываем игрока в браузер
-            if (window.Telegram && window.Telegram.WebApp) {
-                window.Telegram.WebApp.openLink(siteUrl);
-            } else {
-                // Если мы уже в браузере, просто грузим игру
-                startEmulator();
-            }
-        };
-
-        // Запуск эмулятора (если параметр play=true)
-        function startEmulator() {
-            document.body.innerHTML = '<div id="game-container" style="width:100vw; height:100vh;"></div>';
-            window.EJS_player = '#game-container';
-            window.EJS_core = 'sega';
-            window.EJS_gameUrl = '/battletoads.bin';
-            window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
-            window.EJS_startOnLoaded = true;
+        window.EJS_ready = () => {
+            const mem = window.EJS_emulator.memory;
+            const debug = document.getElementById('debug');
             
-            const s = document.createElement('script');
-            s.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
-            document.body.appendChild(s);
-        }
-
-        // Автозапуск при переходе по ссылке
-        window.onload = () => {
-            if (new URLSearchParams(window.location.search).get('play') === 'true') {
-                startEmulator();
-            }
+            // "Детектор": ищем байты, которые меняются при движении
+            let lastMem = new Uint8Array(256);
+            
+            setInterval(() => {
+                let changes = [];
+                // Сканируем диапазон памяти, где обычно живут координаты (0xFFC000 - 0xFFC100)
+                for(let i=0; i<256; i++) {
+                    let val = mem.read(0xFFC000 + i);
+                    if (val !== lastMem[i] && val > 0) {
+                        changes.push(`Addr: 0xFFC${i.toString(16).toUpperCase()} Val: ${val}`);
+                    }
+                    lastMem[i] = val;
+                }
+                if(changes.length > 0) {
+                    debug.innerHTML = changes.slice(0, 5).join('<br>');
+                }
+            }, 500); // Проверяем 2 раза в секунду
         };
     </script>
 </body>
