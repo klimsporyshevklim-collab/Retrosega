@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PIXEL ARENA - PLAY</title>
+    <style>
+        body { margin: 0; background: #000; display: flex; align-items: center; justify-content: center; height: 100vh; }
+        #game-container { width: 100vw; height: 100vh; }
+    </style>
+</head>
+<body>
+    <div id="game-container"></div>
+    
+    <!-- Загружаем движок из облака (этот линк самый стабильный) -->
+    <script src="https://cdn.emulatorjs.org/stable/data/loader.js"></script>
+    
+    <script>
+        window.EJS_player = '#game-container';
+        window.EJS_core = 'sega'; // Ядро для игр SEGA
+        
+        // Прямая ссылка на твой файл игры в репозитории (убедись, что файл в public/battletoads.bin)
+        window.EJS_gameUrl = '/battletoads.bin'; 
+        
+        window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
+        window.EJS_startOnLoaded = true;
+        
+        // ВКЛЮЧАЕМ МУЛЬТИПЛЕЕР (Netplay)
+        window.EJS_netplayServer = "wss://netplay.emulatorjs.org";
+    </script>
+</body>
+</html>
