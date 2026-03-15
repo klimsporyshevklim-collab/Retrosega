@@ -1,27 +1,13 @@
 <!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <title>Pixel Arena - Play</title>
-    <style>
-        body { margin: 0; background: #000; overflow: hidden; }
-        #game-container { width: 100vw; height: 100vh; }
-    </style>
-</head>
-<body>
-    <div id="game-container"></div>
-    
-    <script src="https://cdn.emulatorjs.org/stable/data/loader.js"></script>
-    <script>
-        window.EJS_player = '#game-container';
-        window.EJS_core = 'sega';
-        // Путь к файлу игры в папке public
-        window.EJS_gameUrl = '/battletoads.bin'; 
-        window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
-        window.EJS_startOnLoaded = true;
-        // Включаем Netplay (иконка появится внизу)
-        window.EJS_netplayServer = "wss://netplay.emulatorjs.org";
-        window.EJS_VirtualGamepad = true;
-    </script>
+<html>
+<body style="margin:0; background:#000;">
+    <!-- Мы используем готовый Embed от сервиса, у которого свой CDN -->
+    <iframe 
+        src="https://www.retrogames.cc/embed/28169-battletoads-world.html" 
+        width="100%" 
+        height="100vh" 
+        style="border:none; position:fixed; top:0; left:0; width:100vw; height:100vh;"
+        allow="gamepad *; microphone *; autoplay *">
+    </iframe>
 </body>
 </html>
