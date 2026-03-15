@@ -1,19 +1,27 @@
 <!DOCTYPE html>
-<html>
-<head><script src="https://cdn.emulatorjs.org/stable/data/loader.js"></script></head>
-<body style="margin:0; background:#000;">
-    <div id="game-container" style="width:100vw; height:100vh;"></div>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Pixel Arena - Play</title>
+    <style>
+        body { margin: 0; background: #000; overflow: hidden; }
+        #game-container { width: 100vw; height: 100vh; }
+    </style>
+</head>
+<body>
+    <div id="game-container"></div>
+    
+    <script src="https://cdn.emulatorjs.org/stable/data/loader.js"></script>
     <script>
         window.EJS_player = '#game-container';
         window.EJS_core = 'sega';
-        window.EJS_gameUrl = '/battletoads.bin';
+        // Путь к файлу игры в папке public
+        window.EJS_gameUrl = '/battletoads.bin'; 
         window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
         window.EJS_startOnLoaded = true;
-        // Если режим мультиплеера - включаем сервер соединений
-        const params = new URLSearchParams(window.location.search);
-        if(params.get('mode') === 'netplay') {
-            window.EJS_netplayServer = "wss://netplay.emulatorjs.org";
-        }
+        // Включаем Netplay (иконка появится внизу)
+        window.EJS_netplayServer = "wss://netplay.emulatorjs.org";
+        window.EJS_VirtualGamepad = true;
     </script>
 </body>
 </html>
