@@ -1,25 +1,20 @@
 <!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PIXEL ARENA</title>
-    <!-- Официальный лоадер -->
-    <script src="https://cdn.emulatorjs.org/stable/data/loader.js"></script>
-    <style>
-        body { margin: 0; background: #000; display: flex; align-items: center; justify-content: center; height: 100vh; }
-        #game-container { width: 100vw; height: 100vh; }
-    </style>
-</head>
-<body>
-    <div id="game-container"></div>
+<html>
+<body style="background:#000; display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh;">
+    <h1 style="color:#00f0ff; font-family:sans-serif;">PIXEL ARENA</h1>
+    <button id="play-btn" style="padding:20px; background:#00f0ff; border-radius:10px; border:none; font-weight:bold;">ЗАПУСТИТЬ ИГРУ</button>
+
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script>
-        window.EJS_player = '#game-container';
-        window.EJS_core = 'sega';
-        // Прямая ссылка на твой ROM с GitHub (это самый надежный путь)
-        window.EJS_gameUrl = 'https://raw.githubusercontent.com/klimsporyshevklim-collab/Retrosega/main/public/battletoads.bin';
-        window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
-        window.EJS_startOnLoaded = true;
+        document.getElementById('play-btn').onclick = () => {
+            const gameUrl = "https://tg-game-arena.onrender.com/game.html";
+            // Если мы внутри Телеграма, выкидываем игрока во внешний браузер
+            if (window.Telegram && window.Telegram.WebApp) {
+                window.Telegram.WebApp.openLink(gameUrl);
+            } else {
+                window.location.href = gameUrl;
+            }
+        };
     </script>
 </body>
 </html>
