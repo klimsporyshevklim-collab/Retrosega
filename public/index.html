@@ -1,17 +1,15 @@
 <!DOCTYPE html>
-<html>
-<body style="background:#000; display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh;">
-    <h1 style="color:#00f0ff; font-family:sans-serif; margin-bottom:20px;">PIXEL ARENA</h1>
-    <button id="btn-solo" style="background:#333; color:#fff; padding:20px; border-radius:10px; margin-bottom:10px;">ОДИНОЧНАЯ (ТГ)</button>
-    <button id="btn-multi" style="background:#00f0ff; padding:20px; border-radius:10px;">ТУРНИР (БРАУЗЕР)</button>
-
-    <script>
-        document.getElementById('btn-solo').onclick = () => window.location.href = '/arena.html?mode=solo';
-        document.getElementById('btn-multi').onclick = () => {
-            const url = window.location.origin + '/arena.html?mode=netplay';
-            if (window.Telegram && window.Telegram.WebApp) window.Telegram.WebApp.openLink(url);
-            else window.location.href = url;
-        };
-    </script>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Pixel Arena</title>
+    <style>
+        body { margin:0; background:#000; display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; font-family:sans-serif; }
+        a { padding:20px 40px; background:#00f0ff; color:#000; border-radius:15px; font-weight:bold; text-decoration:none; }
+    </style>
+</head>
+<body>
+    <h1 style="color:#fff; margin-bottom: 20px;">PIXEL ARENA</h1>
+    <a href="/arena">ЗАПУСТИТЬ ТУРНИР</a>
 </body>
 </html>
