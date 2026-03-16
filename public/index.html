@@ -9,71 +9,247 @@
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap');
         body { background: #050505; color: #fff; font-family: 'Orbitron', sans-serif; }
         .neon-border { border: 2px solid #00f0ff; box-shadow: 0 0 10px #00f0ff; }
-        .game-btn { background: #1a1a1a; border: 1px solid #333; transition: 0.3s; }
-        .game-btn:active { background: #00f0ff; color: #000; }
+        .game-btn { background: #1a1a1a; border: 1px solid #333; transition: 0.3s; cursor: pointer; }
+        .game-btn:active, .game-btn:hover { background: #00f0ff; color: #000; }
     </style>
 </head>
 <body class="p-4">
     <header class="text-center mb-8">
-        <h1 class="text-3xl text-cyan-400 italic tracking-widest uppercase">PIXEL ARENA</h1>
-        <div class="flex flex-wrap justify-center gap-2 mt-4 text-[10px]">
-            <button onclick="render('SEGA')" class="px-3 py-1 bg-blue-900 rounded border border-blue-500">SEGA</button>
-            <button onclick="render('NINTENDO')" class="px-3 py-1 bg-red-900 rounded border border-red-500">NES</button>
-            <button onclick="render('PLAYSTATION')" class="px-3 py-1 bg-purple-900 rounded border border-purple-500">PS1</button>
-            <button onclick="render('ARCADE')" class="px-3 py-1 bg-green-900 rounded border border-green-500">ARCADE</button>
+        <h1 class="text-3xl text-cyan-400 italic tracking-widest uppercase mb-4">PIXEL ARENA</h1>
+        <div class="flex flex-wrap justify-center gap-2 mt-4 text-[12px] font-bold">
+            <button onclick="render('SEGA')" class="px-4 py-2 bg-blue-900 rounded border border-blue-500 hover:bg-blue-700 transition">SEGA</button>
+            <button onclick="render('NINTENDO')" class="px-4 py-2 bg-red-900 rounded border border-red-500 hover:bg-red-700 transition">NES / SNES / GBA</button>
+            <button onclick="render('PLAYSTATION')" class="px-4 py-2 bg-purple-900 rounded border border-purple-500 hover:bg-purple-700 transition">PS1</button>
+            <button onclick="render('ARCADE')" class="px-4 py-2 bg-green-900 rounded border border-green-500 hover:bg-green-700 transition">ARCADE</button>
         </div>
     </header>
 
-    <div id="game-list" class="grid grid-cols-2 gap-4 pb-20"></div>
+    <div id="game-list" class="grid grid-cols-2 md:grid-cols-4 gap-4 pb-20"></div>
 
     <div id="player" class="hidden fixed inset-0 bg-black z-50">
-        <button onclick="closeGame()" class="absolute top-2 left-2 z-50 bg-red-600 text-white px-4 py-2 rounded-full font-bold text-xs">EXIT</button>
+        <button onclick="closeGame()" class="absolute top-4 left-4 z-50 bg-red-600 text-white px-6 py-2 rounded font-bold text-sm shadow-lg shadow-red-500/50 hover:bg-red-500">EXIT</button>
         <iframe id="game-frame" class="w-full h-full border-none"></iframe>
     </div>
 
-    <script>
-        const allGames = [
-            { name: "Battletoads", system: "SEGA", url: "https://www.retrogames.cc/embed/16901-battletoads-world.html" },
-            { name: "Sonic 2", system: "SEGA", url: "https://www.retrogames.cc/embed/17236-sonic-the-hedgehog-2-world-rev-a.html" },
-            { name: "Mortal Kombat 3", system: "SEGA", url: "https://www.retrogames.cc/embed/19038-mortal-kombat-3-europe.html" },
-            { name: "Comix Zone", system: "SEGA", url: "https://www.retrogames.cc/embed/16910-comix-zone-europe.html" },
-            { name: "Aladdin (SEGA)", system: "SEGA", url: "https://www.retrogames.cc/embed/29880-aladdin-europe.html" },
-            { name: "Sunset Riders", system: "SEGA", url: "https://www.retrogames.cc/embed/16748-sunset-riders-usa.html" },
-            { name: "Alien 3", system: "SEGA", url: "https://www.retrogames.cc/embed/16954-alien-3-usa-europe.html" },
-            { name: "Super Mario Bros", system: "NINTENDO", url: "https://www.retrogames.cc/embed/16853-super-mario-bros-usa.html" },
-            { name: "Battle City", system: "NINTENDO", url: "https://www.retrogames.cc/embed/16882-battle-city-japan.html" },
-            { name: "Contra", system: "NINTENDO", url: "https://www.retrogames.cc/embed/16841-contra-usa.html" },
-            { name: "Donkey Kong", system: "NINTENDO", url: "https://www.retrogames.cc/embed/23005-donkey-kong-country-usa.html" },
-            { name: "Tekken 3", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/40238-tekken-3.html" },
-            { name: "Crash Bandicoot", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/40784-crash-bandicoot.html" },
-            { name: "Resident Evil 3", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/41501-resident-evil-3.html" },
-            { name: "Silent Hill", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/41684-silent-hill.html" },
-            { name: "Street Fighter II", system: "ARCADE", url: "https://www.retrogames.cc/embed/17395-street-fighter-ii-world-910214.html" },
-            { name: "Metal Slug", system: "ARCADE", url: "https://www.retrogames.cc/embed/23611-metal-slug-super-vehicle-001.html" }
-        ];
+<script>
+    const allGames = [
+        // ================= ARCADE =================
+        { name: "Street Fighter II", system: "ARCADE", url: "https://www.retrogames.cc/embed/17395-street-fighter-ii-world-910214.html" },
+        { name: "Metal Slug", system: "ARCADE", url: "https://www.retrogames.cc/embed/23611-metal-slug-super-vehicle-001.html" },
 
-        function render(system) {
-            const list = document.getElementById('game-list');
-            list.innerHTML = '';
-            allGames.filter(g => g.system === system).forEach(game => {
-                list.innerHTML += `
-                    <div class="game-btn p-4 rounded-xl border border-zinc-700 text-center shadow-lg" onclick="openGame('${game.url}')">
-                        <p class="text-[10px] font-bold uppercase">${game.name}</p>
-                    </div>`;
-            });
-        }
-        
-        function openGame(url) {
-            document.getElementById('player').style.display = 'block';
-            document.getElementById('game-frame').src = url;
-        }
+        // ================= NINTENDO =================
+        { name: "Super Mario Bros. Two-Player Hack", system: "NINTENDO", url: "https://www.retrogames.cc/embed/44789-super-mario-bros-two-player-hack-shared-lives.html" },
+        { name: "Super Mario Bros. (Japan)", system: "NINTENDO", url: "https://www.retrogames.cc/embed/46225-super-mario-bros-japan.html" },
+        { name: "Super Mario Bros. 2 (Japan)", system: "NINTENDO", url: "https://www.retrogames.cc/embed/46228-super-mario-bros-2-japan-en.html" },
+        { name: "Yume Koujou - Doki Doki Panic", system: "NINTENDO", url: "https://www.retrogames.cc/embed/46269-yume-koujou-doki-doki-panic-japan-dv-1.html" },
+        { name: "Tetris (USA)", system: "NINTENDO", url: "https://www.retrogames.cc/embed/17612-tetris-usa.html" },
+        { name: "Battle City (Japan)", system: "NINTENDO", url: "https://www.retrogames.cc/embed/16882-battle-city-japan.html" },
+        { name: "Contra (USA)", system: "NINTENDO", url: "https://www.retrogames.cc/embed/16841-contra-usa.html" },
+        { name: "Bomberman (USA)", system: "NINTENDO", url: "https://www.retrogames.cc/embed/20411-bomberman-usa.html" },
+        { name: "Golf '92, The", system: "NINTENDO", url: "https://www.retrogames.cc/embed/17850-golf-92-the-japan.html" },
+        { name: "Super Smash Bros.", system: "NINTENDO", url: "https://www.retrogames.cc/embed/32117-super-smash-bros-usa.html" },
+        { name: "Worms Armageddon", system: "NINTENDO", url: "https://www.retrogames.cc/embed/18990-worms-armageddon-usa-en-fr-es.html" },
+        { name: "Pocket Monsters Geum", system: "NINTENDO", url: "https://www.retrogames.cc/embed/17471-pocket-monsters-geum-korea.html" },
+        { name: "Tetris DX", system: "NINTENDO", url: "https://www.retrogames.cc/embed/27157-tetris-dx-world.html" },
+        { name: "Pokemon Perfect Crystal", system: "NINTENDO", url: "https://www.retrogames.cc/embed/44705-pokemon-perfect-crystal-2020-update.html" },
+        { name: "Wario Land 3", system: "NINTENDO", url: "https://www.retrogames.cc/embed/27378-wario-land-3-world-en-ja.html" },
+        { name: "007 - Blood Stone", system: "NINTENDO", url: "https://www.retrogames.cc/embed/43443-007-blood-stone-europe.html" },
+        { name: "Naruto - Ninja Destiny", system: "NINTENDO", url: "https://www.retrogames.cc/embed/37212-naruto-ninja-destiny-usa-en-fr.html" },
+        { name: "Tomodachi Collection", system: "NINTENDO", url: "https://www.retrogames.cc/embed/45108-tomodashi-collection-english.html" },
+        { name: "Kirby - Squeak Squad", system: "NINTENDO", url: "https://www.retrogames.cc/embed/35871-kirby-squeak-squad-usa.html" },
+        { name: "Rhythm Heaven", system: "NINTENDO", url: "https://www.retrogames.cc/embed/38727-rhythm-heaven-usa.html" },
+        { name: "Super Bomberman 4", system: "NINTENDO", url: "https://www.retrogames.cc/embed/19846-super-bomberman-4-english-translated.html" },
+        { name: "Top Gear", system: "NINTENDO", url: "https://www.retrogames.cc/embed/23881-top-gear-usa.html" },
+        { name: "Donkey Kong Country", system: "NINTENDO", url: "https://www.retrogames.cc/embed/23005-donkey-kong-country-usa.html" },
+        { name: "Dragon Ball Z - Supersonic Warriors (K)", system: "NINTENDO", url: "https://www.retrogames.cc/embed/28096-dragon-ball-z-supersonic-warriors-k-projectg.html" },
+        { name: "Pokemon Quetzal Alpha", system: "NINTENDO", url: "https://www.retrogames.cc/embed/45227-pokemon-quetzal-alpha-0-6-9.html" },
+        { name: "Dragon Ball Z - Supersonic Warriors (E)", system: "NINTENDO", url: "https://www.retrogames.cc/embed/19537-dragonball-z-supersonic-warriors-e-rising-sun.html" },
+        { name: "Dragonball Advanced Adventure", system: "NINTENDO", url: "https://www.retrogames.cc/embed/26252-dragonball-advanced-adventure-e-rising-sun.html" },
+        { name: "Sonic Advance 3", system: "NINTENDO", url: "https://www.retrogames.cc/embed/19452-sonic-advance-3-e-trashman.html" },
+        { name: "Smash Remix", system: "NINTENDO", url: "https://www.retrogames.cc/embed/45052-smash-remix-1-4-0.html" },
+        { name: "FIFA 99", system: "NINTENDO", url: "https://www.retrogames.cc/embed/32441-fifa-99-europe-en-fr-de-es-it-nl-pt-sv.html" },
+        { name: "Deathbots", system: "NINTENDO", url: "https://www.retrogames.cc/embed/21442-deathbots-usa-unl-v1.html" },
+        { name: "'89 Dennou Kyuusei Uranai", system: "NINTENDO", url: "https://www.retrogames.cc/embed/16719-89-dennou-kyuusei-uranai-japan.html" },
+        { name: "[Aladdin] Dizzy the Adventurer", system: "NINTENDO", url: "https://www.retrogames.cc/embed/19236-aladdin-dizzy-the-adventurer-usa-unl.html" },
+        { name: "[Aladdin] Fantastic Adventures of Dizzy", system: "NINTENDO", url: "https://www.retrogames.cc/embed/19288-aladdin-fantastic-adventures-of-dizzy-the-usa-unl.html" },
+        { name: "10-Yard Fight", system: "NINTENDO", url: "https://www.retrogames.cc/embed/21091-10-yard-fight-japan.html" },
+        { name: "100 Man Dollar Kid", system: "NINTENDO", url: "https://www.retrogames.cc/embed/21835-100-man-dollar-kid-maboroshi-no-teiou-hen-japan.html" },
+        { name: "1942", system: "NINTENDO", url: "https://www.retrogames.cc/embed/16844-1942-japan-usa.html" },
+        { name: "1943 - The Battle of Midway", system: "NINTENDO", url: "https://www.retrogames.cc/embed/16997-1943-the-battle-of-midway-japan-beta.html" },
+        { name: "1999 - Hore, Mitakotoka!", system: "NINTENDO", url: "https://www.retrogames.cc/embed/16852-1999-hore-mitakotoka-seikimatsu-japan.html" },
+        { name: "2 in 1 Lightgun Game", system: "NINTENDO", url: "https://www.retrogames.cc/embed/20793-2-in-1-lightgun-game-tough-cop-super-tough-cop-asia-unl.html" },
+        { name: "3 in 1 Supergun", system: "NINTENDO", url: "https://www.retrogames.cc/embed/20873-3-in-1-supergun-asia-unl.html" },
+        { name: "3-D Battles of World Runner", system: "NINTENDO", url: "https://www.retrogames.cc/embed/21851-3-d-battles-of-world-runner-the-usa.html" },
+        { name: "3-D Block (Hwang Shinwei)", system: "NINTENDO", url: "https://www.retrogames.cc/embed/18091-3-d-block-asia-unl-hwang-shinwei.html" },
+        { name: "3-D Block (RCM Group)", system: "NINTENDO", url: "https://www.retrogames.cc/embed/20995-3-d-block-asia-unl-rcm-group.html" },
+        { name: "4 Nin Uchi Mahjong", system: "NINTENDO", url: "https://www.retrogames.cc/embed/21378-4-nin-uchi-mahjong-japan.html" },
+        { name: "64-in-1 Classic Player", system: "NINTENDO", url: "https://www.retrogames.cc/embed/45436-64-in-1-classic-player.html" },
+        { name: "7 Grand Dad", system: "NINTENDO", url: "https://www.retrogames.cc/embed/44106-7-grand-dad.html" },
+        { name: "8 Eyes", system: "NINTENDO", url: "https://www.retrogames.cc/embed/16840-8-eyes-japan.html" },
+        { name: "A Bootleg Christmas", system: "NINTENDO", url: "https://www.retrogames.cc/embed/44257-a-bootleg-christmas.html" },
+        { name: "Abadox", system: "NINTENDO", url: "https://www.retrogames.cc/embed/20374-abadox-japan.html" },
+        { name: "Abarenbou Tengu", system: "NINTENDO", url: "https://www.retrogames.cc/embed/20808-abarenbou-tengu-japan.html" },
+        { name: "Abu Travels in Agrabah", system: "NINTENDO", url: "https://www.retrogames.cc/embed/44211-abu-travels-in-agrabah.html" },
+        { name: "Aces - Iron Eagle 3", system: "NINTENDO", url: "https://www.retrogames.cc/embed/20629-aces-iron-eagle-3-japan.html" },
+        { name: "Action 52", system: "NINTENDO", url: "https://www.retrogames.cc/embed/21266-action-52-usa-unl.html" },
+        { name: "Action in New York", system: "NINTENDO", url: "https://www.retrogames.cc/embed/17132-action-in-new-york-europe.html" },
+        { name: "Addams Family - Pugsley's Hunt", system: "NINTENDO", url: "https://www.retrogames.cc/embed/21974-addams-family-the-pugsley-s-scavenger-hunt-usa.html" },
+        { name: "Addams Family - Uncle Fester", system: "NINTENDO", url: "https://www.retrogames.cc/embed/22126-addams-family-the-uncle-fester-s-quest-europe.html" },
+        { name: "Addams Family (Europe)", system: "NINTENDO", url: "https://www.retrogames.cc/embed/22353-addams-family-the-europe-en-fr-de.html" },
+        { name: "AD&D - Dragons of Flame", system: "NINTENDO", url: "https://www.retrogames.cc/embed/18012-advanced-dungeons-dragons-dragons-of-flame-japan.html" },
+        { name: "AD&D - Dragons of Flame (En)", system: "NINTENDO", url: "https://www.retrogames.cc/embed/21944-advanced-dungeons-dragons-dragons-of-flame-japan-en-by-dvd-v1-03.html" },
+        { name: "Adventures in Magic Kingdom", system: "NINTENDO", url: "https://www.retrogames.cc/embed/21508-adventures-in-the-magic-kingdom-europe.html" },
+        { name: "Adventures of Bayou Billy", system: "NINTENDO", url: "https://www.retrogames.cc/embed/21667-adventures-of-bayou-billy-the-europe.html" },
+        { name: "Adventures of Captain Comic", system: "NINTENDO", url: "https://www.retrogames.cc/embed/20797-adventures-of-captain-comic-the-usa-unl.html" },
+        { name: "Adventures of Dino Riki", system: "NINTENDO", url: "https://www.retrogames.cc/embed/21205-adventures-of-dino-riki-the-usa.html" },
+        { name: "Adventures of Lolo", system: "NINTENDO", url: "https://www.retrogames.cc/embed/18055-adventures-of-lolo-europe.html" },
+        { name: "Adventures of Rad Gravity", system: "NINTENDO", url: "https://www.retrogames.cc/embed/20929-adventures-of-rad-gravity-the-europe.html" },
+        { name: "Adventures of Rocky & Bullwinkle", system: "NINTENDO", url: "https://www.retrogames.cc/embed/17039-adventures-of-rocky-and-bullwinkle-and-friends-the-usa.html" },
+        { name: "Adventures of Tom Sawyer", system: "NINTENDO", url: "https://www.retrogames.cc/embed/19256-adventures-of-tom-sawyer-usa.html" },
+        { name: "Adventures of Tomley Kleene", system: "NINTENDO", url: "https://www.retrogames.cc/embed/46475-adventures-of-tomley-kleene-by-bob-rost.html" },
+        { name: "After Burner", system: "NINTENDO", url: "https://www.retrogames.cc/embed/21681-after-burner-usa-unl.html" },
+        { name: "Ai Sensei no Oshiete", system: "NINTENDO", url: "https://www.retrogames.cc/embed/21482-ai-sensei-no-oshiete-watashi-no-hoshi-japan.html" },
+        { name: "Air Fortress", system: "NINTENDO", url: "https://www.retrogames.cc/embed/21891-air-fortress-europe.html" },
+        { name: "Airball", system: "NINTENDO", url: "https://www.retrogames.cc/embed/17748-airball-proto1.html" },
+        { name: "Airwolf", system: "NINTENDO", url: "https://www.retrogames.cc/embed/21077-airwolf-usa.html" },
+        { name: "Akagawa Jirou no Yuurei", system: "NINTENDO", url: "https://www.retrogames.cc/embed/21479-akagawa-jirou-no-yuurei-ressha-japan.html" },
+        { name: "Akira", system: "NINTENDO", url: "https://www.retrogames.cc/embed/22260-akira-japan.html" },
+        { name: "Akumajou Densetsu (Castlevania 3)", system: "NINTENDO", url: "https://www.retrogames.cc/embed/21042-akumajou-densetsu-japan-en-by-vice-v1-0-legend-of-demon-castle-castlevania-iii.html" },
+        { name: "Kid Dracula", system: "NINTENDO", url: "https://www.retrogames.cc/embed/21778-akumajou-special-boku-dracula-kun-japan-en-by-vice-v1-04-i-m-kid-dracula.html" },
+        { name: "Aladdin (NES)", system: "NINTENDO", url: "https://www.retrogames.cc/embed/43875-aladdin-unl.html" },
+        { name: "Aladdin 4 (1995)", system: "NINTENDO", url: "https://www.retrogames.cc/embed/44069-aladdin-4-1995-unl.html" },
+        { name: "Aladdin Hummer Team", system: "NINTENDO", url: "https://www.retrogames.cc/embed/44101-aladdin-hummer-team-deluxe-v2-1.html" },
+        { name: "Lion King (USA)", system: "NINTENDO", url: "https://www.retrogames.cc/embed/19874-lion-king-the-usa.html" },
 
-        function closeGame() {
-            document.getElementById('player').style.display = 'none';
-            document.getElementById('game-frame').src = '';
-        }
+        // ================= SEGA =================
+        { name: "AAAHH!!! Real Monsters", system: "SEGA", url: "https://www.retrogames.cc/embed/16727-aaahh-real-monsters-usa-europe.html" },
+        { name: "Aladdin (SEGA)", system: "SEGA", url: "https://www.retrogames.cc/embed/29880-aladdin-europe.html" },
+        { name: "Alien 3", system: "SEGA", url: "https://www.retrogames.cc/embed/16954-alien-3-usa-europe.html" },
+        { name: "Joe & Mac", system: "SEGA", url: "https://www.retrogames.cc/embed/28572-joe-mac-usa.html" },
+        { name: "Spider-Man", system: "SEGA", url: "https://www.retrogames.cc/embed/28292-spider-man-world-sega.html" },
+        { name: "Battletoads", system: "SEGA", url: "https://www.retrogames.cc/embed/16901-battletoads-world.html" },
+        { name: "Battletoads & Double Dragon", system: "SEGA", url: "https://www.retrogames.cc/embed/16964-battletoads-double-dragon-usa.html" },
+        { name: "Beavis and Butt-Head", system: "SEGA", url: "https://www.retrogames.cc/embed/29923-beavis-and-butt-head-europe.html" },
+        { name: "Comix Zone", system: "SEGA", url: "https://www.retrogames.cc/embed/16910-comix-zone-europe.html" },
+        { name: "Home Alone 2", system: "SEGA", url: "https://www.retrogames.cc/embed/17237-home-alone-2-lost-in-new-york-usa.html" },
+        { name: "Jurassic Park - Rampage Edition", system: "SEGA", url: "https://www.retrogames.cc/embed/28505-jurassic-park-rampage-edition-usa-europe.html" },
+        { name: "Mortal Kombat 3", system: "SEGA", url: "https://www.retrogames.cc/embed/19038-mortal-kombat-3-europe.html" },
+        { name: "Scooby Doo Mystery", system: "SEGA", url: "https://www.retrogames.cc/embed/28473-scooby-doo-mystery-usa.html" },
+        { name: "Sonic the Hedgehog", system: "SEGA", url: "https://www.retrogames.cc/embed/29946-sonic-the-hedgehog-japan.html" },
+        { name: "Sonic Classic Heroes", system: "SEGA", url: "https://www.retrogames.cc/embed/42046-sonic-classic-heroes.html" },
+        { name: "Sonic 3 & Knuckles", system: "SEGA", url: "https://www.retrogames.cc/embed/29209-sonic-knuckles-sonic-the-hedgehog-3-world.html" },
+        { name: "Sonic 2", system: "SEGA", url: "https://www.retrogames.cc/embed/17236-sonic-the-hedgehog-2-world-rev-a.html" },
+        { name: "Sonic 2 Heroes", system: "SEGA", url: "https://www.retrogames.cc/embed/42282-sonic-2-heroes.html" },
+        { name: "White Sonic in S&K", system: "SEGA", url: "https://www.retrogames.cc/embed/42509-white-sonic-in-sonic-knuckles.html" },
+        { name: "Amy Rose in Sonic", system: "SEGA", url: "https://www.retrogames.cc/embed/42695-amy-rose-in-sonic-the-hedgehog.html" },
+        { name: "Sunset Riders", system: "SEGA", url: "https://www.retrogames.cc/embed/16748-sunset-riders-usa.html" },
+        { name: "Tiny Toon - Buster's Hidden Treasure", system: "SEGA", url: "https://www.retrogames.cc/embed/29804-tiny-toon-adventures-buster-s-hidden-treasure-europe.html" },
+        { name: "Toe Jam & Earl", system: "SEGA", url: "https://www.retrogames.cc/embed/28252-toe-jam-earl-in-panic-auf-funkotron-germany.html" },
+        { name: "Ultimate Mortal Kombat 3", system: "SEGA", url: "https://www.retrogames.cc/embed/30389-ultimate-mortal-kombat-3-europe.html" },
+        { name: "X-Men 2 - Clone Wars", system: "SEGA", url: "https://www.retrogames.cc/embed/29870-x-men-2-clone-wars-usa-europe.html" },
+        { name: "Ms. Pac-Man", system: "SEGA", url: "https://www.retrogames.cc/embed/35015-ms-pac-man-usa.html" },
 
-        render('SEGA');
-    </script>
+        // ================= PLAYSTATION =================
+        { name: "Tekken 3", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/40238-tekken-3.html" },
+        { name: "Crash Team Racing", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/41687-crash-team-racing.html" },
+        { name: "Crash Bandicoot", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/40784-crash-bandicoot.html" },
+        { name: "Bloody Roar 2", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/41623-bloody-roar-2-bringer-of-new-age.html" },
+        { name: "FIFA 2000", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/41776-fifa-2000.html" },
+        { name: "007 - Tomorrow Never Dies", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/40787-007-tomorrow-never-dies.html" },
+        { name: "Apocalypse", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/41561-apocalypse.html" },
+        { name: "Aqua GT", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/41562-aquagt.html" },
+        { name: "Army Men: Green Rogue", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/41579-army-men-green-rogue.html" },
+        { name: "Asterix & Obelix", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/46361-asterix-obelix-take-on-caesar-europe.html" },
+        { name: "Asterix: Mega Madness", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/41583-asterix-mega-madness.html" },
+        { name: "Barbie - Gotta Have Games", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/40216-barbie-gotta-have-games.html" },
+        { name: "Batman & Robin", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/41597-batman-robin.html" },
+        { name: "Batman Beyond", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/41598-batman-beyond-return-of-the-joker.html" },
+        { name: "Batman Forever", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/41599-batman-forever-the-arcade-game.html" },
+        { name: "Batman: Gotham City Racer", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/41600-batman-gotham-city-racer.html" },
+        { name: "Casper", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/40178-casper.html" },
+        { name: "Casper - Friends Around the World", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/40185-casper-friends-around-the-world.html" },
+        { name: "Castlevania - Rondo of the Night", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/46624-castlevania-rondo-of-the-night.html" },
+        { name: "Castlevania - SOTN", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/41504-castlevania-symphony-of-the-night.html" },
+        { name: "Castlevania - SOTN Quality hack", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/44460-castlevania-symphony-of-the-night-quality-hack.html" },
+        { name: "Castlevania Chronicles", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/41505-castlevania-chronicles.html" },
+        { name: "Cat in the Hat", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/40058-cat-in-the-hat-the.html" },
+        { name: "Centipede", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/41649-centipede.html" },
+        { name: "Chaos Break", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/41650-chaos-break.html" },
+        { name: "Chess", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/41651-chess.html" },
+        { name: "Chessmaster 3-D", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/40204-chessmaster-3-d-the.html" },
+        { name: "Chessmaster II", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/41652-chessmaster-ii.html" },
+        { name: "Civilization II", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/41663-civilization-ii.html" },
+        { name: "Cleopatra Fortune", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/41664-cleopatra-fortune.html" },
+        { name: "Disney's Story Studio - Mulan", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/40154-disney-s-story-studio-mulan.html" },
+        { name: "Doom", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/41739-doom.html" },
+        { name: "Double Dragon", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/41510-double-dragon.html" },
+        { name: "Dracula (Disc 1)", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/44283-dracula-the-last-sanctuary-usa-disc-1.html" },
+        { name: "Dracula (Disc 2)", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/44284-dracula-the-last-sanctuary-usa-disc-2.html" },
+        { name: "FIFA 2001", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/41777-fifa-2001.html" },
+        { name: "FIFA 2002", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/41778-fifa-2002.html" },
+        { name: "Gran Turismo 2", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/43709-gran-turismo-2-usa-arcade-mode.html" },
+        { name: "Grand Theft Auto", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/41827-grand-theft-auto.html" },
+        { name: "Grand Theft Auto 2", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/41828-grand-theft-auto-2.html" },
+        { name: "Jikkyou Powerful Pro Yakyuu 2001", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/43303-jikkyou-powerfull-pro-yakyuu-2001-ketteiban.html" },
+        { name: "Jimmy White's 2", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/41931-jimmy-whites-2-cueball.html" },
+        { name: "LSD Dream Emulator", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/41792-lsd-dream-emulator.html" },
+        { name: "Metal Gear Solid", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/43266-metal-gear-solid-disc-1.html" },
+        { name: "Mickey's Wild Adventure", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/43391-mickeys-wild-adventure.html" },
+        { name: "MK - Special Forces", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/40213-mortal-kombat-special-forces.html" },
+        { name: "Mortal Kombat 2", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/40809-mortal-kombat-2.html" },
+        { name: "Mortal Kombat 3", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/40810-mortal-kombat-3.html" },
+        { name: "Mortal Kombat 4", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/40811-mortal-kombat-4.html" },
+        { name: "MK Mythologies: Sub-Zero", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/40812-mortal-kombat-mythologies-sub-zero.html" },
+        { name: "Mortal Kombat Trilogy", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/40808-mortal-kombat-trilogy.html" },
+        { name: "Ms. Pac-Man Maze Madness", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/45383-ms-pac-man-maze-madness-usa.html" },
+        { name: "NCAA March Madness 2001", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/44191-ncaa-march-madness-2001-usa.html" },
+        { name: "NHL Open Ice", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/40064-nhl-open-ice-2-on-2-challenge.html" },
+        { name: "Dora the Explorer", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/44600-nick-jr-dora-the-explorer-barnyard-buddies-usa.html" },
+        { name: "Pink Panther", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/42265-pink-panther-pinkadelic-pursuit.html" },
+        { name: "Resident Evil", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/42875-resident-evil.html" },
+        { name: "Resident Evil 2 (Leon)", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/42943-resident-evil-2-dual-shock-ver-disc-1-leon.html" },
+        { name: "Resident Evil 2 (Claire)", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/42944-resident-evil-2-dual-shock-ver-disc-2-claire.html" },
+        { name: "Resident Evil 3", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/41501-resident-evil-3.html" },
+        { name: "Resident Evil Survivor", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/41500-resident-evil-survivor.html" },
+        { name: "Shrek Treasure Hunt", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/40164-shrek-treasure-hunt.html" },
+        { name: "Silent Hill", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/41684-silent-hill.html" },
+        { name: "Simpsons Wrestling", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/40108-simpsons-the-wrestling.html" },
+        { name: "Slam 'n Jam '96", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/40087-slam-n-jam-96-featuring-magic-kareem.html" },
+        { name: "Smurfs, The", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/46450-smurfs-the-usa-en-fr-es.html" },
+        { name: "South Park", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/43712-south-park-usa.html" },
+        { name: "SpongeBob SquarePants", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/40063-spongebob-squarepants-supersponge.html" },
+        { name: "The Adventures of Lomax", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/41991-the-adventures-of-lomax.html" },
+        { name: "Tiny Toon - Toonenstein", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/45458-tiny-toon-adventures-toonenstein-dare-to-scare-usa.html" },
+        { name: "Tom and Jerry", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/40146-tom-and-jerry-in-house-trap.html" },
+        { name: "Rainbow Six - Lone Wolf", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/40032-tom-clancy-s-rainbow-six-lone-wolf.html" },
+        { name: "Tomb Raider", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/42723-tomb-raider.html" },
+        { name: "Tomb Raider 2", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/42724-tomb-raider-2.html" },
+        { name: "V2000", system: "PLAYSTATION", url: "https://www.retrogames.cc/embed/41516-v2000.html" }
+    ];
+
+    function render(system) {
+        const list = document.getElementById('game-list');
+        list.innerHTML = '';
+        allGames.filter(g => g.system === system).forEach(game => {
+            list.innerHTML += `
+                <div class="game-btn p-3 rounded-lg border border-zinc-700 text-center shadow-lg flex items-center justify-center h-20" onclick="openGame('${game.url}')">
+                    <p class="text-[11px] font-bold uppercase tracking-wider">${game.name}</p>
+                </div>`;
+        });
+    }
+    
+    function openGame(url) {
+        document.getElementById('player').style.display = 'block';
+        document.getElementById('game-frame').src = url;
+    }
+
+    function closeGame() {
+        document.getElementById('player').style.display = 'none';
+        document.getElementById('game-frame').src = '';
+    }
+
+    // По умолчанию открываем NINTENDO
+    render('NINTENDO');
+</script>
 </body>
 </html>
